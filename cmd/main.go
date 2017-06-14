@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/moomerman/phx-dev/dev"
+	"github.com/moomerman/phx-dev/devcert"
 )
 
 var (
@@ -16,17 +17,12 @@ func main() {
 	flag.Parse()
 
 	if *fInstall {
-		err := dev.CreateCert()
+		err := devcert.CreateCert()
 		// dev.InstallDaemon()
 		if err != nil {
 			log.Fatalf("Unable to install self-signed certificate: %s", err)
 		}
 		return
-	}
-
-	err := dev.LoadCert()
-	if err != nil {
-		panic("Unable to load certificate, have you installed yet?")
 	}
 
 	dev.Start()

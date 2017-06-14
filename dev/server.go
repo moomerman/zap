@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/moomerman/phx-dev/devcert"
 	"golang.org/x/net/http2"
 )
 
@@ -19,10 +20,13 @@ func Start() {
 }
 
 func startHTTPS(handler http.Handler) {
-	certCache := NewCertCache()
+	cache, err := devcert.NewCertCache()
+	if err != nil {
+		log.Fatal("[dev.startHTTPS] unable to create new cert cache", err)
+	}
 
 	tlsConfig := &tls.Config{
-		GetCertificate: certCache.GetCertificate,
+		GetCertificate: cache.GetCertificate,
 	}
 
 	server := &http.Server{
@@ -31,11 +35,9 @@ func startHTTPS(handler http.Handler) {
 	}
 	http2.ConfigureServer(server, nil)
 
-	fmt.Println(" [StartSSL] starting")
-
 	listener, err := tls.Listen("tcp", ":4443", tlsConfig)
 	if err != nil {
-		log.Fatal(" [StartSSL] exited")
+		log.Fatal("[dev.startHTTPS] unable to create listener", err)
 	}
 
 	fmt.Println(server.Serve(listener))

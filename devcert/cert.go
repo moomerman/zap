@@ -1,4 +1,4 @@
-package dev
+package devcert
 
 // based on https://github.com/puma/puma-dev/blob/master/dev/ssl.go
 
@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -24,26 +23,8 @@ import (
 	"github.com/vektra/errors"
 )
 
-const supportDir = "~/Library/Application Support/com.github.moomerman.phx-dev"
-
 // CACert is the self-signed root certificate
 var CACert *tls.Certificate
-
-// LoadCert loads the self-signed certificate
-func LoadCert() error {
-	dir := homedir.MustExpand(supportDir)
-
-	keyPath := filepath.Join(dir, "key.pem")
-	certPath := filepath.Join(dir, "cert.pem")
-
-	tlsCert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return err
-	}
-
-	CACert = &tlsCert
-	return nil
-}
 
 // CreateCert creates a new self-signed root certificate
 func CreateCert() error {
@@ -125,15 +106,18 @@ type CertCache struct {
 }
 
 // NewCertCache holds the dynamically generated host certificates
-func NewCertCache() *CertCache {
-	cache, err := lru.NewARC(1024)
+func NewCertCache() (*CertCache, error) {
+	err := loadCert()
 	if err != nil {
-		panic(err)
+		return nil, errors.Context(err, "couldn't load root certificate")
 	}
 
-	return &CertCache{
-		cache: cache,
+	cache, err := lru.NewARC(1024)
+	if err != nil {
+		return nil, errors.Context(err, "couldn't create a new cache")
 	}
+
+	return &CertCache{cache: cache}, nil
 }
 
 // GetCertificate implements the required function for tls config
@@ -209,21 +193,17 @@ func makeCert(parent *tls.Certificate, name string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func installCert(cert string) error {
-	fmt.Printf("* Adding certification to system keychain as trusted\n")
-	fmt.Printf("! There is probably a dialog open that you must type your password into\n")
+func loadCert() error {
+	dir := homedir.MustExpand(supportDir)
 
-	keychain := "/Library/Keychains/System.keychain"
+	keyPath := filepath.Join(dir, "key.pem")
+	certPath := filepath.Join(dir, "cert.pem")
 
-	command := "do shell script \"security add-trusted-cert -d -r trustRoot -k '" + keychain + "' '" + cert + "'\" with administrator privileges"
-	cmd := exec.Command("osascript", "-e", command)
-	err := cmd.Run()
-
+	tlsCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("* Certificates setup complete\n")
-
+	CACert = &tlsCert
 	return nil
 }
