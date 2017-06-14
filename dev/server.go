@@ -7,11 +7,16 @@ import (
 	"net/http"
 
 	"github.com/moomerman/phx-dev/devcert"
+	"github.com/moomerman/phx-dev/multiproxy"
 	"golang.org/x/net/http2"
 )
 
+var proxy *multiproxy.MultiProxy
+
 // Start starts the HTTP and HTTPS proxy servers
 func Start() {
+	proxy = multiproxy.NewProxy("http://127.0.0.1:4000", "localhost")
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", proxyHandler())
 
@@ -22,7 +27,7 @@ func Start() {
 func startHTTPS(handler http.Handler) {
 	cache, err := devcert.NewCertCache()
 	if err != nil {
-		log.Fatal("[dev.startHTTPS] unable to create new cert cache", err)
+		log.Fatal("unable to create new cert cache", err)
 	}
 
 	tlsConfig := &tls.Config{
@@ -35,9 +40,9 @@ func startHTTPS(handler http.Handler) {
 	}
 	http2.ConfigureServer(server, nil)
 
-	listener, err := tls.Listen("tcp", ":4443", tlsConfig)
+	listener, err := tls.Listen("tcp", ":443", tlsConfig)
 	if err != nil {
-		log.Fatal("[dev.startHTTPS] unable to create listener", err)
+		log.Fatal("unable to create listener", err)
 	}
 
 	fmt.Println(server.Serve(listener))
@@ -45,4 +50,16 @@ func startHTTPS(handler http.Handler) {
 
 func startHTTP(handler http.Handler) {
 
+}
+
+func proxyHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		source := fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
+		fmt.Println("[proxy]", source, "->", proxy.URL)
+		proxy.Proxy(w, r)
+	}
 }

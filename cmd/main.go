@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	fInstall = flag.Bool("install", false, "Run application installation")
-	fStart   = flag.Bool("start", false, "Start the server")
+	fInstall = flag.Bool("install", false, "Install the server")
 )
 
 func main() {
@@ -18,10 +17,11 @@ func main() {
 
 	if *fInstall {
 		err := devcert.CreateCert()
-		// dev.InstallDaemon()
 		if err != nil {
-			log.Fatalf("Unable to install self-signed certificate: %s", err)
+			log.Fatal("Unable to install self-signed certificate", err)
 		}
+
+		// err := dev.InstallDaemon()
 		return
 	}
 
