@@ -32,9 +32,6 @@ type App struct {
 }
 
 func (a *App) Start() error {
-	// take the hostname, see if we have a symlink that matches
-	// if so, follow and determine the dir of the application
-
 	path := homedir.MustExpand(appsPath) + "/" + a.Host
 	stat, err := os.Stat(path)
 	if err != nil {
