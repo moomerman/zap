@@ -29,9 +29,10 @@ type App struct {
 	Dir     string
 	Command *exec.Cmd
 
-	proxy    *multiproxy.MultiProxy
-	stdout   io.Reader
-	lastUsed time.Time
+	proxy     *multiproxy.MultiProxy
+	stdout    io.Reader
+	lastUsed  time.Time
+	readyChan chan struct{}
 }
 
 func (a *App) Start() error {
@@ -81,8 +82,12 @@ exec mix do deps.get, phx.server'
 
 func (a *App) launch() error {
 	shell := os.Getenv("SHELL")
-	addr := findAvailableAddr()
-	_, port, err := net.SplitHostPort(addr)
+
+	port, err := findAvailablePort()
+	if err != nil {
+		return errors.Context(err, "couldn't find available port")
+	}
+
 	a.Port = port
 
 	cmd := exec.Command(shell, "-l", "-i", "-c",
@@ -111,9 +116,13 @@ func (a *App) launch() error {
 	a.Command = cmd
 	a.proxy = multiproxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
 
-	time.Sleep(5 * time.Second)
-
 	go a.tail()
+
+	err = a.wait()
+	if err != nil {
+		return errors.Context(err, "failed waiting for app to start")
+	}
+
 	go a.idleMonitor()
 
 	return nil
@@ -129,10 +138,16 @@ func (a *App) tail() error {
 			line, err := r.ReadString('\n')
 			if line != "" {
 				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
+
 				mustRestart, _ := regexp.Compile("You must restart your server")
 				if mustRestart.MatchString(line) {
 					c <- errors.New("Restart required")
 					return
+				}
+
+				ready, _ := regexp.Compile("Running .*.Endpoint") // TODO: also grep for the port
+				if ready.MatchString(line) {
+					close(a.readyChan)
 				}
 			}
 
@@ -203,8 +218,8 @@ func findAppForHost(host string) (*App, error) {
 	fmt.Println("[app] attempting to start app for host", host)
 
 	app = &App{
-		Host:     host,
-		lastUsed: time.Now(),
+		Host:      host,
+		readyChan: make(chan struct{}),
 	}
 
 	err := app.Start()
@@ -220,8 +235,26 @@ func findAppForHost(host string) (*App, error) {
 	return app, nil
 }
 
-func findAvailableAddr() string {
-	l, _ := net.Listen("tcp", ":0")
+func findAvailablePort() (string, error) {
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return "", err
+	}
 	l.Close()
-	return l.Addr().String()
+
+	_, port, err := net.SplitHostPort(l.Addr().String())
+	if err != nil {
+		return "", err
+	}
+
+	return port, nil
+}
+
+func (a *App) wait() error {
+	select {
+	case <-a.readyChan:
+		fmt.Println("[app] app ready", a.Host)
+		a.lastUsed = time.Now()
+		return nil
+	}
 }
