@@ -1,6 +1,7 @@
 package dev
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net"
@@ -92,7 +93,47 @@ func (a *App) launch() error {
 
 	time.Sleep(5 * time.Second)
 
+	go a.tail()
+
 	return nil
+}
+
+func (a *App) tail() error {
+	c := make(chan error)
+
+	go func() {
+		r := bufio.NewReader(a.stdout)
+
+		for {
+			line, err := r.ReadString('\n')
+			if line != "" {
+				fmt.Fprintf(os.Stdout, "%s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
+			}
+
+			if err != nil {
+				c <- err
+				return
+			}
+		}
+	}()
+
+	var err error
+
+	select {
+	case err = <-c:
+		err = errors.Context(err, "stdout/stderr closed")
+	}
+
+	a.Command.Process.Kill()
+	a.Command.Wait()
+
+	lock.Lock()
+	defer lock.Unlock()
+	delete(apps, a.Host)
+
+	fmt.Printf("* App '%s' shutdown and cleaned up\n", a.Host)
+
+	return err
 }
 
 func findAppForHost(host string) (*App, error) {

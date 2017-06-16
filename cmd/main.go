@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"strconv"
 
 	"github.com/moomerman/phx-dev/dev"
 	"github.com/moomerman/phx-dev/devcert"
@@ -12,12 +13,12 @@ var (
 	fInstall   = flag.Bool("install", false, "Install the server")
 	fUninstall = flag.Bool("uninstall", false, "Uninstall the server")
 	fLaunchd   = flag.Bool("launchd", false, "Server is running via launchd")
+	fHTTPPort  = flag.Int("http-port", 80, "port to listen on for HTTP requests")
+	fHTTPSPort = flag.Int("https-port", 443, "port to listen on for HTTPS requests")
 )
 
-var httpPort = "8080"
-var httpsPort = "443"
-
 func main() {
+	var httpPort, httpsPort string
 	flag.Parse()
 
 	if *fInstall {
@@ -43,8 +44,8 @@ func main() {
 		httpPort = "Socket"
 		httpsPort = "SocketTLS"
 	} else {
-		httpPort = ":" + httpPort
-		httpsPort = ":" + httpsPort
+		httpPort = ":" + strconv.Itoa(*fHTTPPort)
+		httpsPort = ":" + strconv.Itoa(*fHTTPSPort)
 	}
 
 	server := dev.NewServer()
