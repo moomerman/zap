@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -56,7 +57,7 @@ func (a *App) Start() error {
 
 const executionShell = `exec bash -c '
 cd %s
-exec mix phx.server'
+exec mix do deps.get, phx.server'
 `
 
 func (a *App) launch() error {
@@ -108,6 +109,11 @@ func (a *App) tail() error {
 			line, err := r.ReadString('\n')
 			if line != "" {
 				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
+				mustRestart, _ := regexp.Compile("You must restart your server")
+				if mustRestart.MatchString(line) {
+					c <- errors.New("Restart required")
+					return
+				}
 			}
 
 			if err != nil {
