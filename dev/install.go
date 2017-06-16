@@ -14,7 +14,7 @@ import (
 const applicationName = "com.github.moomerman.phx-dev"
 const applicationShortName = "phx-dev"
 
-func Install(httpPort, tlsPort string) error {
+func Install(httpPort, tlsPort int) error {
 	binPath, err := osext.Executable()
 	if err != nil {
 		return errors.Context(err, "calculating executable path")
@@ -44,14 +44,14 @@ func Install(httpPort, tlsPort string) error {
            <key>SockNodeName</key>
            <string>0.0.0.0</string>
            <key>SockServiceName</key>
-           <string>%s</string>
+           <string>%d</string>
        </dict>
        <key>SocketTLS</key>
        <dict>
            <key>SockNodeName</key>
            <string>0.0.0.0</string>
            <key>SockServiceName</key>
-           <string>%s</string>
+           <string>%d</string>
        </dict>
    </dict>
    <key>StandardOutPath</key>
@@ -89,7 +89,7 @@ func Install(httpPort, tlsPort string) error {
 		return errors.Context(err, "loading plist into launchctl")
 	}
 
-	fmt.Printf("* Installed %s on ports: http %s, https %s\n", applicationShortName, httpPort, tlsPort)
+	fmt.Printf("* Installed %s on ports: http %d, https %d\n", applicationShortName, httpPort, tlsPort)
 
 	return nil
 }

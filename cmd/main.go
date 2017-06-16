@@ -13,12 +13,11 @@ var (
 	fInstall   = flag.Bool("install", false, "Install the server")
 	fUninstall = flag.Bool("uninstall", false, "Uninstall the server")
 	fLaunchd   = flag.Bool("launchd", false, "Server is running via launchd")
-	fHTTPPort  = flag.Int("http-port", 80, "port to listen on for HTTP requests")
+	fHTTPPort  = flag.Int("http-port", 8080, "port to listen on for HTTP requests")
 	fHTTPSPort = flag.Int("https-port", 443, "port to listen on for HTTPS requests")
 )
 
 func main() {
-	var httpPort, httpsPort string
 	flag.Parse()
 
 	if *fInstall {
@@ -27,7 +26,7 @@ func main() {
 			log.Fatal("Unable to install self-signed certificate", err)
 		}
 
-		err = dev.Install(httpPort, httpsPort)
+		err = dev.Install(*fHTTPPort, *fHTTPSPort)
 		if err != nil {
 			log.Fatal("Unable to install daemon", err)
 		}
@@ -40,6 +39,8 @@ func main() {
 		return
 	}
 
+	var httpPort, httpsPort string
+
 	if *fLaunchd {
 		httpPort = "Socket"
 		httpsPort = "SocketTLS"
@@ -50,5 +51,6 @@ func main() {
 
 	server := dev.NewServer()
 
+	go server.Serve(httpPort)
 	server.ServeTLS(httpsPort)
 }

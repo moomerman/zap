@@ -107,7 +107,7 @@ func (a *App) tail() error {
 		for {
 			line, err := r.ReadString('\n')
 			if line != "" {
-				fmt.Fprintf(os.Stdout, "%s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
+				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
 			}
 
 			if err != nil {
