@@ -82,7 +82,8 @@ func proxyHandler() func(http.ResponseWriter, *http.Request) {
 
 		app, err := findAppForHost(r.Host)
 		if err != nil {
-			// render an error
+			w.WriteHeader(http.StatusBadGateway)
+			fmt.Fprint(w, "couldn't find app", err)
 			return
 		}
 

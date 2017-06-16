@@ -60,8 +60,8 @@ func (a *App) Start() error {
 func (a *App) Stop(reason string, e error) error {
 	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, a.Command.Process.Pid, reason, e)
 	lock.Lock()
-	defer lock.Unlock()
 	delete(apps, a.Host)
+	lock.Unlock()
 
 	err := a.Command.Process.Kill()
 	if err != nil {
@@ -120,7 +120,7 @@ func (a *App) launch() error {
 
 	err = a.wait()
 	if err != nil {
-		return errors.Context(err, "failed waiting for app to start")
+		return err
 	}
 
 	go a.idleMonitor()
@@ -184,14 +184,11 @@ func (a *App) idleMonitor() error {
 		}
 	}
 
-	return nil
 }
 
 func (a *App) idle() bool {
 	diff := time.Since(a.lastUsed)
 	if diff > 60*60*time.Second {
-		lock.Lock()
-		defer lock.Unlock()
 		return true
 	}
 
@@ -199,17 +196,17 @@ func (a *App) idle() bool {
 }
 
 func findAppForHost(host string) (*App, error) {
-	lock.Lock()
-	defer lock.Unlock()
-
 	hostParts := strings.Split(host, ":")
 	host = hostParts[0]
 
+	lock.Lock()
 	if apps == nil {
 		apps = make(map[string]*App)
 	}
 
 	app := apps[host]
+	lock.Unlock()
+
 	if app != nil {
 		app.lastUsed = time.Now()
 		return app, nil
@@ -225,13 +222,17 @@ func findAppForHost(host string) (*App, error) {
 	err := app.Start()
 	if err != nil {
 		fmt.Println("[app] error starting app for host", host, err)
-		return nil, err
+		app.Stop("app failed to start", err)
+		return nil, errors.Context(err, "app failed to start")
 	}
 
 	fmt.Println("[app] created app for host", host, app.Port)
 	// TODO: apps should be keyed by Dir not host as you might have multiple
 	// hosts pointing to the same app
+	lock.Lock()
 	apps[host] = app
+	lock.Unlock()
+
 	return app, nil
 }
 
@@ -256,5 +257,8 @@ func (a *App) wait() error {
 		fmt.Println("[app] app ready", a.Host)
 		a.lastUsed = time.Now()
 		return nil
+	case <-time.After(time.Second * 10):
+		close(a.readyChan)
+		return errors.New("time out waiting for app to start")
 	}
 }
