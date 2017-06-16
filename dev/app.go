@@ -29,8 +29,9 @@ type App struct {
 	Dir     string
 	Command *exec.Cmd
 
-	proxy  *multiproxy.MultiProxy
-	stdout io.Reader
+	proxy    *multiproxy.MultiProxy
+	stdout   io.Reader
+	lastUsed time.Time
 }
 
 func (a *App) Start() error {
@@ -53,6 +54,24 @@ func (a *App) Start() error {
 	}
 
 	return a.launch()
+}
+
+func (a *App) Stop(reason string, e error) error {
+	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, a.Command.Process.Pid, reason, e)
+	lock.Lock()
+	defer lock.Unlock()
+	delete(apps, a.Host)
+
+	err := a.Command.Process.Kill()
+	if err != nil {
+		fmt.Printf("! Error trying to stop %s: %s", a.Host, err)
+		return err
+	}
+
+	a.Command.Wait()
+
+	fmt.Printf("* App '%s' shutdown and cleaned up\n", a.Host)
+	return nil
 }
 
 const executionShell = `exec bash -c '
@@ -95,6 +114,7 @@ func (a *App) launch() error {
 	time.Sleep(5 * time.Second)
 
 	go a.tail()
+	go a.idleMonitor()
 
 	return nil
 }
@@ -130,16 +150,37 @@ func (a *App) tail() error {
 		err = errors.Context(err, "stdout/stderr closed")
 	}
 
-	a.Command.Process.Kill()
-	a.Command.Wait()
-
-	lock.Lock()
-	defer lock.Unlock()
-	delete(apps, a.Host)
-
-	fmt.Printf("* App '%s' shutdown and cleaned up\n", a.Host)
+	a.Stop("see error", err)
 
 	return err
+}
+
+func (a *App) idleMonitor() error {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if a.idle() {
+				a.Stop("app is idle", nil)
+				return nil
+			}
+		}
+	}
+
+	return nil
+}
+
+func (a *App) idle() bool {
+	diff := time.Since(a.lastUsed)
+	if diff > 60*60*time.Second {
+		lock.Lock()
+		defer lock.Unlock()
+		return true
+	}
+
+	return false
 }
 
 func findAppForHost(host string) (*App, error) {
@@ -155,13 +196,15 @@ func findAppForHost(host string) (*App, error) {
 
 	app := apps[host]
 	if app != nil {
+		app.lastUsed = time.Now()
 		return app, nil
 	}
 
 	fmt.Println("[app] attempting to start app for host", host)
 
 	app = &App{
-		Host: host,
+		Host:     host,
+		lastUsed: time.Now(),
 	}
 
 	err := app.Start()
