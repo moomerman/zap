@@ -2,6 +2,7 @@ package dev
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,6 +20,8 @@ type Server struct {
 // NewServer starts the HTTP and HTTPS proxy servers
 func NewServer() *Server {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/phx/log", logHandler())
+	mux.HandleFunc("/phx/status", statusHandler())
 	mux.HandleFunc("/", proxyHandler())
 
 	http := startHTTP(mux)
@@ -82,13 +85,39 @@ func proxyHandler() func(http.ResponseWriter, *http.Request) {
 
 		app, err := findAppForHost(r.Host)
 		if err != nil {
-			w.WriteHeader(http.StatusBadGateway)
-			fmt.Fprint(w, "couldn't find app", err)
+			http.Error(w, "502 App Not Found", http.StatusBadGateway)
 			return
 		}
 
 		source := fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
 		fmt.Println("[proxy]", source, "->", app.proxy.URL)
 		app.proxy.Proxy(w, r)
+	}
+}
+
+func logHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			http.Error(w, "502 App Not Found", http.StatusBadGateway)
+			return
+		}
+
+		app.log.WriteTo(w)
+	}
+}
+
+func statusHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			http.Error(w, "502 App Not Found", http.StatusBadGateway)
+			return
+		}
+
+		content, _ := json.MarshalIndent(app, "", "  ")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(content)
 	}
 }

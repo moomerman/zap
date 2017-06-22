@@ -14,6 +14,7 @@ import (
 
 	"github.com/moomerman/phx-dev/multiproxy"
 	"github.com/puma/puma-dev/homedir"
+	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
 
@@ -33,6 +34,7 @@ type App struct {
 	stdout    io.Reader
 	lastUsed  time.Time
 	readyChan chan struct{}
+	log       linebuffer.LineBuffer
 }
 
 func (a *App) Start() error {
@@ -137,6 +139,7 @@ func (a *App) tail() error {
 		for {
 			line, err := r.ReadString('\n')
 			if line != "" {
+				a.log.Append(line)
 				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
 
 				mustRestart, _ := regexp.Compile("You must restart your server")
@@ -222,7 +225,9 @@ func findAppForHost(host string) (*App, error) {
 	err := app.Start()
 	if err != nil {
 		fmt.Println("[app] error starting app for host", host, err)
-		app.Stop("app failed to start", err)
+		if app.Command != nil {
+			app.Stop("app failed to start", err)
+		}
 		return nil, errors.Context(err, "app failed to start")
 	}
 
