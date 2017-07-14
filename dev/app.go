@@ -96,16 +96,19 @@ func (a *App) WriteLog(w io.Writer) {
 func getDriver(host, dir string) (Driver, error) {
 	_, err := os.Stat(path.Join(dir, "mix.exs"))
 	if err == nil {
-		fmt.Println("[app] using the phoenix driver (found mix.exs))", host)
+		fmt.Println("[app]", host, "using the phoenix driver (found mix.exs)")
 		return CreatePhoenixDriver(host, dir)
 	}
 
-	fmt.Println("[app] using the static driver", host)
+	fmt.Println("[app]", host, "using the static driver")
 	return CreateStaticDriver(host, dir)
+
+	// fmt.Println("[app]", host, "using the proxy driver")
+	// return CreateProxyDriver(host, dir, "80")
 }
 
 func (a *App) idleMonitor() error {
-	fmt.Println("[app] starting idle monitor", a.Host)
+	fmt.Println("[app]", a.Host, "starting idle monitor")
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -147,22 +150,22 @@ func findAppForHost(host string) (*App, error) {
 		return app, nil
 	}
 
-	fmt.Println("[app] attempting to start app for host", host)
+	fmt.Println("[app]", host, "creating app")
 
 	app, err := NewApp(host)
 	if err != nil {
-		fmt.Println("[app] error creating app for host", host, err)
+		fmt.Println("[app]", host, "error creating app", err)
 		return nil, errors.Context(err, "app failed to create")
 	}
 
 	err = app.Start()
 	if err != nil {
-		fmt.Println("[app] error starting app for host", host, err)
+		fmt.Println("[app]", host, "error starting app", err)
 		app.Stop("app failed to start", err)
 		return nil, errors.Context(err, "app failed to start")
 	}
 
-	fmt.Println("[app] created app for host", host)
+	fmt.Println("[app]", host, "created app")
 	// TODO: apps should be keyed by Dir not host as you might have multiple
 	// hosts pointing to the same app
 	lock.Lock()
