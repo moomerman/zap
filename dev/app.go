@@ -45,18 +45,27 @@ func NewApp(host string) (*App, error) {
 		return nil, err
 	}
 
-	dir, err := os.Readlink(path)
-	if err != nil {
-		return nil, err
-	}
+	var dir string
+	var driver Driver
 
-	if !stat.IsDir() {
-		return nil, errors.New("invalid app - not a dir")
-	}
+	if stat.IsDir() {
+		dir, err = os.Readlink(path)
+		if err != nil {
+			return nil, err
+		}
 
-	driver, err := getDriver(host, dir)
-	if err != nil {
-		return nil, errors.New("invalid app - could not determine driver")
+		driver, err = getDriver(host, dir)
+		if err != nil {
+			return nil, errors.Context(err, "could not determine driver")
+		}
+	} else {
+		fmt.Println("[app]", host, "using the proxy driver")
+		// TODO: read the proxy host/port from the file
+		// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L473
+		driver, err = CreateProxyDriver(host, dir, "80")
+		if err != nil {
+			return nil, errors.Context(err, "unable to create proxy driver")
+		}
 	}
 
 	return &App{
@@ -102,9 +111,6 @@ func getDriver(host, dir string) (Driver, error) {
 
 	fmt.Println("[app]", host, "using the static driver")
 	return CreateStaticDriver(host, dir)
-
-	// fmt.Println("[app]", host, "using the proxy driver")
-	// return CreateProxyDriver(host, dir, "80")
 }
 
 func (a *App) idleMonitor() error {

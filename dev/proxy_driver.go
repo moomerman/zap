@@ -30,7 +30,7 @@ func (d *ProxyDriver) WriteLog(w io.Writer) {}
 
 func (d *ProxyDriver) Start() error {
 	addr := "http://127.0.0.1:" + d.Port
-	fmt.Println("[proxy]", "starting proxy", addr, d.Host)
+	fmt.Println("[proxy]", d.Host, "starting proxy to", addr)
 	d.proxy = multiproxy.NewProxy(addr, d.Host)
 	return nil
 }
