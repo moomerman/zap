@@ -3,7 +3,6 @@ package dev
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -22,7 +21,7 @@ func NewServer() *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/phx/log", logHandler())
 	mux.HandleFunc("/phx/status", statusHandler())
-	mux.HandleFunc("/", proxyHandler())
+	mux.HandleFunc("/", appHandler())
 
 	http := startHTTP(mux)
 	https := startHTTPS(mux)
@@ -76,22 +75,15 @@ func startHTTP(handler http.Handler) *http.Server {
 	return nil
 }
 
-func proxyHandler() func(http.ResponseWriter, *http.Request) {
+func appHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		scheme := "http"
-		if r.TLS != nil {
-			scheme = "https"
-		}
-
 		app, err := findAppForHost(r.Host)
 		if err != nil {
 			http.Error(w, "502 App Not Found", http.StatusBadGateway)
 			return
 		}
 
-		source := fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
-		fmt.Println("[proxy]", source, "->", app.proxy.URL)
-		app.proxy.Proxy(w, r)
+		app.Serve(w, r)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -37,26 +38,52 @@ type App struct {
 	log       linebuffer.LineBuffer
 }
 
-func (a *App) Start() error {
-	path := homedir.MustExpand(appsPath) + "/" + a.Host
+type Driver interface {
+	Start() error
+	Serve(w http.ResponseWriter, r *http.Request)
+}
+
+func NewApp(host string) (*App, error) {
+	path := homedir.MustExpand(appsPath) + "/" + host
 	stat, err := os.Stat(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dir, err := os.Readlink(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if stat.IsDir() {
-		a.Link = path
-		a.Dir = dir
-	} else {
-		return errors.New("unknown app")
+	if !stat.IsDir() {
+		return nil, errors.New("unknown app - link is not a dir")
 	}
 
+	// TODO: determine the type of app
+	// mix.exs => elixir
+	// phoenix in there => phoenix
+
+	return &App{
+		Host:      host,
+		Link:      path,
+		Dir:       dir,
+		readyChan: make(chan struct{}),
+	}, nil
+}
+
+func (a *App) Start() error {
+	// a.driver.Start()
 	return a.launch()
+}
+
+func (a *App) Serve(w http.ResponseWriter, r *http.Request) {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	source := fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
+	fmt.Println("[proxy]", source, "->", a.proxy.URL)
+	a.proxy.Proxy(w, r)
 }
 
 func (a *App) Stop(reason string, e error) error {
@@ -217,12 +244,13 @@ func findAppForHost(host string) (*App, error) {
 
 	fmt.Println("[app] attempting to start app for host", host)
 
-	app = &App{
-		Host:      host,
-		readyChan: make(chan struct{}),
+	app, err := NewApp(host)
+	if err != nil {
+		fmt.Println("[app] error creating app for host", host, err)
+		return nil, errors.Context(err, "app failed to create")
 	}
 
-	err := app.Start()
+	err = app.Start()
 	if err != nil {
 		fmt.Println("[app] error starting app for host", host, err)
 		if app.Command != nil {
