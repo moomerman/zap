@@ -77,6 +77,8 @@ func startHTTP(handler http.Handler) *http.Server {
 
 func appHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// fmt.Println("[handle]", fullURL(r))
+
 		app, err := findAppForHost(r.Host)
 		if err != nil {
 			http.Error(w, "502 App Not Found", http.StatusBadGateway)
@@ -95,7 +97,7 @@ func logHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		app.log.WriteTo(w)
+		app.WriteLog(w)
 	}
 }
 

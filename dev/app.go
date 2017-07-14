@@ -1,21 +1,18 @@
 package dev
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
+	"path"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/moomerman/phx-dev/multiproxy"
 	"github.com/puma/puma-dev/homedir"
-	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
 
@@ -25,21 +22,19 @@ var apps map[string]*App
 var lock sync.Mutex
 
 type App struct {
-	Host    string
-	Port    string
-	Link    string
-	Dir     string
-	Command *exec.Cmd
+	Host string
+	Link string
+	Dir  string
 
-	proxy     *multiproxy.MultiProxy
-	stdout    io.Reader
-	lastUsed  time.Time
-	readyChan chan struct{}
-	log       linebuffer.LineBuffer
+	driver   Driver
+	lastUsed time.Time
 }
 
 type Driver interface {
+	Command() *exec.Cmd
 	Start() error
+	Stop() error
+	WriteLog(io.Writer)
 	Serve(w http.ResponseWriter, r *http.Request)
 }
 
@@ -56,151 +51,61 @@ func NewApp(host string) (*App, error) {
 	}
 
 	if !stat.IsDir() {
-		return nil, errors.New("unknown app - link is not a dir")
+		return nil, errors.New("invalid app - not a dir")
 	}
 
-	// TODO: determine the type of app
-	// mix.exs => elixir
-	// phoenix in there => phoenix
+	driver, err := getDriver(host, dir)
+	if err != nil {
+		return nil, errors.New("invalid app - could not determine driver")
+	}
 
 	return &App{
-		Host:      host,
-		Link:      path,
-		Dir:       dir,
-		readyChan: make(chan struct{}),
+		Host:   host,
+		Link:   path,
+		Dir:    dir,
+		driver: driver,
 	}, nil
 }
 
 func (a *App) Start() error {
-	// a.driver.Start()
-	return a.launch()
-}
-
-func (a *App) Serve(w http.ResponseWriter, r *http.Request) {
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-	source := fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
-	fmt.Println("[proxy]", source, "->", a.proxy.URL)
-	a.proxy.Proxy(w, r)
-}
-
-func (a *App) Stop(reason string, e error) error {
-	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, a.Command.Process.Pid, reason, e)
-	lock.Lock()
-	delete(apps, a.Host)
-	lock.Unlock()
-
-	err := a.Command.Process.Kill()
-	if err != nil {
-		fmt.Printf("! Error trying to stop %s: %s", a.Host, err)
-		return err
-	}
-
-	a.Command.Wait()
-
-	fmt.Printf("* App '%s' shutdown and cleaned up\n", a.Host)
-	return nil
-}
-
-const executionShell = `exec bash -c '
-cd %s
-exec mix do deps.get, phx.server'
-`
-
-func (a *App) launch() error {
-	shell := os.Getenv("SHELL")
-
-	port, err := findAvailablePort()
-	if err != nil {
-		return errors.Context(err, "couldn't find available port")
-	}
-
-	a.Port = port
-
-	cmd := exec.Command(shell, "-l", "-i", "-c",
-		fmt.Sprintf(executionShell, a.Dir))
-
-	cmd.Dir = a.Dir
-
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("PHX_PORT=%s", a.Port),
-	)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	a.stdout = stdout
-	cmd.Stderr = cmd.Stdout
-
-	err = cmd.Start()
-	if err != nil {
-		return errors.Context(err, "starting app")
-	}
-
-	a.Command = cmd
-	a.proxy = multiproxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
-
-	go a.tail()
-
-	err = a.wait()
+	err := a.driver.Start()
 	if err != nil {
 		return err
 	}
 
 	go a.idleMonitor()
-
 	return nil
 }
 
-func (a *App) tail() error {
-	c := make(chan error)
+func (a *App) Stop(reason string, e error) error {
+	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, a.driver.Command().Process.Pid, reason, e)
+	lock.Lock()
+	delete(apps, a.Host)
+	lock.Unlock()
+	return a.driver.Stop()
+}
 
-	go func() {
-		r := bufio.NewReader(a.stdout)
+func (a *App) Serve(w http.ResponseWriter, r *http.Request) {
+	a.driver.Serve(w, r)
+}
 
-		for {
-			line, err := r.ReadString('\n')
-			if line != "" {
-				a.log.Append(line)
-				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", a.Host, a.Port, a.Command.Process.Pid, line)
+func (a *App) WriteLog(w io.Writer) {
+	a.driver.WriteLog(w)
+}
 
-				mustRestart, _ := regexp.Compile("You must restart your server")
-				if mustRestart.MatchString(line) {
-					c <- errors.New("Restart required")
-					return
-				}
-
-				ready, _ := regexp.Compile("Running .*.Endpoint") // TODO: also grep for the port
-				if ready.MatchString(line) {
-					close(a.readyChan)
-				}
-			}
-
-			if err != nil {
-				c <- err
-				return
-			}
-		}
-	}()
-
-	var err error
-
-	select {
-	case err = <-c:
-		err = errors.Context(err, "stdout/stderr closed")
+func getDriver(host, dir string) (Driver, error) {
+	_, err := os.Stat(path.Join(dir, "mix.exs"))
+	if err == nil {
+		fmt.Println("[app] using the phoenix driver (found mix.exs))", host)
+		return CreatePhoenixDriver(host, dir)
 	}
 
-	a.Stop("see error", err)
-
-	return err
+	fmt.Println("[app] using the static driver", host)
+	return CreateStaticDriver(host, dir)
 }
 
 func (a *App) idleMonitor() error {
+	fmt.Println("[app] starting idle monitor", a.Host)
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -253,13 +158,11 @@ func findAppForHost(host string) (*App, error) {
 	err = app.Start()
 	if err != nil {
 		fmt.Println("[app] error starting app for host", host, err)
-		if app.Command != nil {
-			app.Stop("app failed to start", err)
-		}
+		app.Stop("app failed to start", err)
 		return nil, errors.Context(err, "app failed to start")
 	}
 
-	fmt.Println("[app] created app for host", host, app.Port)
+	fmt.Println("[app] created app for host", host)
 	// TODO: apps should be keyed by Dir not host as you might have multiple
 	// hosts pointing to the same app
 	lock.Lock()
@@ -282,16 +185,4 @@ func findAvailablePort() (string, error) {
 	}
 
 	return port, nil
-}
-
-func (a *App) wait() error {
-	select {
-	case <-a.readyChan:
-		fmt.Println("[app] app ready", a.Host)
-		a.lastUsed = time.Now()
-		return nil
-	case <-time.After(time.Second * 10):
-		close(a.readyChan)
-		return errors.New("time out waiting for app to start")
-	}
 }
