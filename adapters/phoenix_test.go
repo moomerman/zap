@@ -7,9 +7,14 @@ import (
 	"testing"
 )
 
-func TestStatic(t *testing.T) {
+func TestPhoenix(t *testing.T) {
 
-	adapter, err := CreateStaticAdapter("./test/static")
+	adapter, err := CreatePhoenixAdapter("phoenix.test", "./test/phoenix1.3")
+	if err != nil {
+		panic(err)
+	}
+
+	err = adapter.Start()
 	if err != nil {
 		panic(err)
 	}
