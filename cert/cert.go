@@ -99,14 +99,14 @@ func CreateCert() error {
 	return installCert(certPath)
 }
 
-// CertCache is a struct to hold the dynamic certificates and a lock
-type CertCache struct {
+// Cache is a struct to hold the dynamic certificates and a lock
+type Cache struct {
 	lock  sync.Mutex
 	cache *lru.ARCCache
 }
 
-// NewCertCache holds the dynamically generated host certificates
-func NewCertCache() (*CertCache, error) {
+// NewCache holds the dynamically generated host certificates
+func NewCache() (*Cache, error) {
 	err := loadCert()
 	if err != nil {
 		return nil, errors.Context(err, "couldn't load root certificate")
@@ -117,11 +117,11 @@ func NewCertCache() (*CertCache, error) {
 		return nil, errors.Context(err, "couldn't create a new cache")
 	}
 
-	return &CertCache{cache: cache}, nil
+	return &Cache{cache: cache}, nil
 }
 
 // GetCertificate implements the required function for tls config
-func (c *CertCache) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (c *Cache) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

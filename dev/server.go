@@ -53,7 +53,7 @@ func (s *Server) Serve(bind string) {
 }
 
 func startHTTPS(handler http.Handler) *http.Server {
-	cache, err := cert.NewCertCache()
+	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("unable to create new cert cache", err)
 	}

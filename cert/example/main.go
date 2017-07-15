@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/moomerman/phx-dev/cert"
 )
 
 func main() {
-	cache, err := cert.NewCertCache()
+	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("Unable to create new cert cache", err)
 	}

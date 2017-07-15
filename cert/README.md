@@ -1,4 +1,4 @@
-# package devcert
+# package cert
 
 This package contains functions for creating a local development root
 certificate that can then be used with net/http tlsConfig servers to dynamically
@@ -15,14 +15,14 @@ prompt is shown) so all generated certificates are trusted automatically.
 You need to run the root certificate creation step once:
 
 ```
-  err := devcert.CreateCert()
+  err := cert.CreateCert()
 ```
 
 Now you can create an HTTPS server that uses the root certificate to generate
 valid certificates dynamically:
 
 ```
-  cache, err := devcert.NewCertCache()
+  cache, err := devcert.NewCache()
 
   tlsConfig := &tls.Config{
     GetCertificate: cache.GetCertificate,
