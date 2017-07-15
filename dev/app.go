@@ -22,12 +22,12 @@ var apps map[string]*App
 var lock sync.Mutex
 
 type App struct {
-	Host string
-	Link string
-	Dir  string
+	Host     string
+	Link     string
+	Dir      string
+	LastUsed time.Time
 
-	driver   Driver
-	lastUsed time.Time
+	driver Driver
 }
 
 type Driver interface {
@@ -95,6 +95,7 @@ func (a *App) Stop(reason string, e error) error {
 }
 
 func (a *App) Serve(w http.ResponseWriter, r *http.Request) {
+	a.LastUsed = time.Now()
 	a.driver.Serve(w, r)
 }
 
@@ -131,7 +132,7 @@ func (a *App) idleMonitor() error {
 }
 
 func (a *App) idle() bool {
-	diff := time.Since(a.lastUsed)
+	diff := time.Since(a.LastUsed)
 	if diff > 60*60*time.Second {
 		return true
 	}
@@ -152,7 +153,7 @@ func findAppForHost(host string) (*App, error) {
 	lock.Unlock()
 
 	if app != nil {
-		app.lastUsed = time.Now()
+		app.LastUsed = time.Now()
 		return app, nil
 	}
 
