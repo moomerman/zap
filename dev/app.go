@@ -153,7 +153,6 @@ func findAppForHost(host string) (*App, error) {
 	lock.Unlock()
 
 	if app != nil {
-		app.LastUsed = time.Now()
 		return app, nil
 	}
 
