@@ -22,12 +22,18 @@ interface.
 
 ### Simple Proxy
 
-A proxy is configured by creating a file in the `~/.phx-dev` folder with the
-host/port combination that you want to proxy to.
+A proxy is configured by creating a file in the `~/.phx-dev` folder containing the
+host/port combination that you want to proxy to.  You can specify just a port and
+it will assume localhost.
 
 `echo "http://127.0.0.1:3000" > ~/.phx-dev/mysite.dev`
+`echo "4000" > ~/.phx-dev/othersite.dev`
 
 ### Elixir/Phoenix
+
+When a `mix.exs` file is detected in the root of the dir that a symlink points to
+and contains the `phoenix` package then a `mix phx.server` server will be launched
+on a random port and requests will be proxied to that application.
 
 To configure a phoenix application simply create a symbolic link to the
 phoenix application and update your `config/dev.exs` file to allow phx-dev
@@ -36,14 +42,10 @@ to override the default 4000 http port.
 `ln -sf /path/to/phoenix/app ~/.phx-dev/mysite.dev`
 
 `config/mix.exs`
-```
-config :web_app, Your.Web.Endpoint,
+```elixir
+config :your_app, YourApp.Web.Endpoint,
   http: [port: System.get_env("PHX_PORT") || 4000],
 ```
-
-When a `mix.exs` file is detected in the root of the dir that the symlink points to
-and contains the `phoenix` package then a `mix phx.server` server will be launched
-on a random port and requests will be proxied to that application.
 
 ### Static HTML
 
