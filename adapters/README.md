@@ -20,14 +20,14 @@ interface.
 
 ## Current implementations
 
-* Simple Proxy
+### Simple Proxy
 
 A proxy is configured by creating a file in the `~/.phx-dev` folder with the
 host/port combination that you want to proxy to.
 
 eg. `echo "http://127.0.0.1:3000" > ~/.phx-dev/mysite.dev`
 
-* Elixir/Phoenix
+### Elixir/Phoenix
 
 If a `mix.exs` file is detected in the root of the dir that the symlink points to
 and contains the `phoenix` package then a phoenix server will be launched and
@@ -35,7 +35,7 @@ requests will be proxied to that port.
 
 eg. `ln -sf /path/to/phoenix/app ~/.phx-dev/mysite.dev`
 
-* Static HTML
+### Static HTML
 
 To enable a static HTML site, simply simlink to a the public directory
 where the static files live.
