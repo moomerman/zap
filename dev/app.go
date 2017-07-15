@@ -78,16 +78,16 @@ func (a *App) Start() error {
 }
 
 func (a *App) Stop(reason string, e error) error {
-	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, a.driver.Command().Process.Pid, reason, e)
+	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, reason, e)
 	lock.Lock()
 	delete(apps, a.Host)
 	lock.Unlock()
 	return a.driver.Stop()
 }
 
-func (a *App) Serve(w http.ResponseWriter, r *http.Request) {
+func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.LastUsed = time.Now()
-	a.driver.Serve(w, r)
+	a.driver.ServeHTTP(w, r)
 }
 
 func (a *App) WriteLog(w io.Writer) {

@@ -60,7 +60,7 @@ func (d *PhoenixAdapter) WriteLog(w io.Writer) {
 	d.log.WriteTo(w)
 }
 
-func (d *PhoenixAdapter) Serve(w http.ResponseWriter, r *http.Request) {
+func (d *PhoenixAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[proxy]", fullURL(r), "->", d.proxy.URL)
 	d.proxy.Proxy(w, r)
 }

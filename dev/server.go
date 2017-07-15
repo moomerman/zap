@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/moomerman/phx-dev/devcert"
+	"github.com/moomerman/phx-dev/cert"
 	"github.com/puma/puma-dev/dev/launch"
 	"golang.org/x/net/http2"
 )
@@ -49,11 +49,8 @@ func (s *Server) ServeTLS(bind string) {
 	}
 }
 
-func (s *Server) Serve(bind string) {
-}
-
 func startHTTPS(handler http.Handler) *http.Server {
-	cache, err := devcert.NewCertCache()
+	cache, err := cert.NewCertCache()
 	if err != nil {
 		log.Fatal("unable to create new cert cache", err)
 	}
@@ -77,15 +74,13 @@ func startHTTP(handler http.Handler) *http.Server {
 
 func appHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// fmt.Println("[handle]", fullURL(r))
-
 		app, err := findAppForHost(r.Host)
 		if err != nil {
 			http.Error(w, "502 App Not Found", http.StatusBadGateway)
 			return
 		}
 
-		app.Serve(w, r)
+		app.ServeHTTP(w, r)
 	}
 }
 

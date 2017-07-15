@@ -12,7 +12,7 @@ type Adapter interface {
 	Start() error
 	Stop() error
 	WriteLog(io.Writer)
-	Serve(w http.ResponseWriter, r *http.Request)
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 func findAvailablePort() (string, error) {

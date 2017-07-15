@@ -36,7 +36,7 @@ func (d *ProxyAdapter) Start() error {
 	return nil
 }
 
-func (d *ProxyAdapter) Serve(w http.ResponseWriter, r *http.Request) {
+func (d *ProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[proxy]", fullURL(r), "->", d.proxy.URL)
 	d.proxy.Proxy(w, r)
 }

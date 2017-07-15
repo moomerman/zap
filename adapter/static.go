@@ -27,7 +27,7 @@ func (d *StaticAdapter) Stop() error          { return nil }
 func (d *StaticAdapter) Command() *exec.Cmd   { return nil }
 func (d *StaticAdapter) WriteLog(w io.Writer) {}
 
-func (d *StaticAdapter) Serve(w http.ResponseWriter, r *http.Request) {
+func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := d.Dir + r.URL.Path
 
 	info, err := os.Stat(filename)

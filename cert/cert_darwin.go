@@ -1,4 +1,4 @@
-package devcert
+package cert
 
 import (
 	"fmt"
