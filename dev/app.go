@@ -55,7 +55,7 @@ func NewApp(host string) (*App, error) {
 		fmt.Println("[app]", host, "using the proxy driver")
 		// TODO: read the proxy host/port from the file
 		// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L473
-		driver, err = adapter.CreateProxyAdapter(host, dir, "80")
+		driver, err = adapter.CreateProxyAdapter(host, "80")
 		if err != nil {
 			return nil, errors.Context(err, "unable to create proxy driver")
 		}

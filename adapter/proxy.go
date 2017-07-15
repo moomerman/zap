@@ -12,16 +12,14 @@ import (
 // ProxyAdapter holds the state for a simple proxy
 type ProxyAdapter struct {
 	Host  string
-	Dir   string
 	Port  string
 	proxy *multiproxy.MultiProxy
 }
 
 // CreateProxyAdapter creates a new proxy
-func CreateProxyAdapter(host, dir, port string) (Adapter, error) {
+func CreateProxyAdapter(host, port string) (Adapter, error) {
 	return &ProxyAdapter{
 		Host: host,
-		Dir:  dir,
 		Port: port,
 	}, nil
 }
