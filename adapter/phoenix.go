@@ -1,4 +1,4 @@
-package dev
+package adapter
 
 import (
 	"bufio"
@@ -15,7 +15,7 @@ import (
 	"github.com/vektra/errors"
 )
 
-type PhoenixDriver struct {
+type PhoenixAdapter struct {
 	Host string
 	Dir  string
 	Port string
@@ -27,19 +27,19 @@ type PhoenixDriver struct {
 	readyChan chan struct{}
 }
 
-func CreatePhoenixDriver(host, dir string) (Driver, error) {
-	return &PhoenixDriver{
+func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
+	return &PhoenixAdapter{
 		Host:      host,
 		Dir:       dir,
 		readyChan: make(chan struct{}),
 	}, nil
 }
 
-func (d *PhoenixDriver) Start() error {
+func (d *PhoenixAdapter) Start() error {
 	return d.launch()
 }
 
-func (d *PhoenixDriver) Stop() error {
+func (d *PhoenixAdapter) Stop() error {
 	err := d.cmd.Process.Kill()
 	if err != nil {
 		fmt.Printf("! Error trying to stop %s: %s", d.Host, err)
@@ -52,15 +52,15 @@ func (d *PhoenixDriver) Stop() error {
 	return nil
 }
 
-func (d *PhoenixDriver) Command() *exec.Cmd {
+func (d *PhoenixAdapter) Command() *exec.Cmd {
 	return d.cmd
 }
 
-func (d *PhoenixDriver) WriteLog(w io.Writer) {
+func (d *PhoenixAdapter) WriteLog(w io.Writer) {
 	d.log.WriteTo(w)
 }
 
-func (d *PhoenixDriver) Serve(w http.ResponseWriter, r *http.Request) {
+func (d *PhoenixAdapter) Serve(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[proxy]", fullURL(r), "->", d.proxy.URL)
 	d.proxy.Proxy(w, r)
 }
@@ -70,7 +70,7 @@ cd %s
 exec mix do deps.get, phx.server'
 `
 
-func (d *PhoenixDriver) launch() error {
+func (d *PhoenixAdapter) launch() error {
 	shell := os.Getenv("SHELL")
 
 	port, err := findAvailablePort()
@@ -116,7 +116,7 @@ func (d *PhoenixDriver) launch() error {
 	return nil
 }
 
-func (d *PhoenixDriver) tail() error {
+func (d *PhoenixAdapter) tail() error {
 	c := make(chan error)
 
 	go func() {
@@ -160,7 +160,7 @@ func (d *PhoenixDriver) tail() error {
 	return err
 }
 
-func (d *PhoenixDriver) wait() error {
+func (d *PhoenixAdapter) wait() error {
 	select {
 	case <-d.readyChan:
 		fmt.Println("[app] app ready", d.Host)

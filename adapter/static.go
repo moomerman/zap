@@ -1,4 +1,4 @@
-package dev
+package adapter
 
 import (
 	"fmt"
@@ -10,24 +10,24 @@ import (
 	"time"
 )
 
-type StaticDriver struct {
+type StaticAdapter struct {
 	Host string
 	Dir  string
 }
 
-func CreateStaticDriver(host, dir string) (Driver, error) {
-	return &StaticDriver{
+func CreateStaticAdapter(host, dir string) (Adapter, error) {
+	return &StaticAdapter{
 		Host: host,
 		Dir:  dir,
 	}, nil
 }
 
-func (d *StaticDriver) Start() error         { return nil }
-func (d *StaticDriver) Stop() error          { return nil }
-func (d *StaticDriver) Command() *exec.Cmd   { return nil }
-func (d *StaticDriver) WriteLog(w io.Writer) {}
+func (d *StaticAdapter) Start() error         { return nil }
+func (d *StaticAdapter) Stop() error          { return nil }
+func (d *StaticAdapter) Command() *exec.Cmd   { return nil }
+func (d *StaticAdapter) WriteLog(w io.Writer) {}
 
-func (d *StaticDriver) Serve(w http.ResponseWriter, r *http.Request) {
+func (d *StaticAdapter) Serve(w http.ResponseWriter, r *http.Request) {
 	filename := d.Dir + r.URL.Path
 
 	info, err := os.Stat(filename)

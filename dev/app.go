@@ -3,15 +3,14 @@ package dev
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/moomerman/phx-dev/adapter"
 	"github.com/puma/puma-dev/homedir"
 	"github.com/vektra/errors"
 )
@@ -27,15 +26,7 @@ type App struct {
 	Dir      string
 	LastUsed time.Time
 
-	driver Driver
-}
-
-type Driver interface {
-	Command() *exec.Cmd
-	Start() error
-	Stop() error
-	WriteLog(io.Writer)
-	Serve(w http.ResponseWriter, r *http.Request)
+	driver adapter.Adapter
 }
 
 func NewApp(host string) (*App, error) {
@@ -46,7 +37,7 @@ func NewApp(host string) (*App, error) {
 	}
 
 	var dir string
-	var driver Driver
+	var driver adapter.Adapter
 
 	if stat.IsDir() {
 		dir, err = os.Readlink(path)
@@ -62,7 +53,7 @@ func NewApp(host string) (*App, error) {
 		fmt.Println("[app]", host, "using the proxy driver")
 		// TODO: read the proxy host/port from the file
 		// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L473
-		driver, err = CreateProxyDriver(host, dir, "80")
+		driver, err = adapter.CreateProxyAdapter(host, dir, "80")
 		if err != nil {
 			return nil, errors.Context(err, "unable to create proxy driver")
 		}
@@ -103,15 +94,15 @@ func (a *App) WriteLog(w io.Writer) {
 	a.driver.WriteLog(w)
 }
 
-func getDriver(host, dir string) (Driver, error) {
+func getDriver(host, dir string) (adapter.Adapter, error) {
 	_, err := os.Stat(path.Join(dir, "mix.exs"))
 	if err == nil {
 		fmt.Println("[app]", host, "using the phoenix driver (found mix.exs)")
-		return CreatePhoenixDriver(host, dir)
+		return adapter.CreatePhoenixAdapter(host, dir)
 	}
 
 	fmt.Println("[app]", host, "using the static driver")
-	return CreateStaticDriver(host, dir)
+	return adapter.CreateStaticAdapter(host, dir)
 }
 
 func (a *App) idleMonitor() error {
@@ -179,19 +170,4 @@ func findAppForHost(host string) (*App, error) {
 	lock.Unlock()
 
 	return app, nil
-}
-
-func findAvailablePort() (string, error) {
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return "", err
-	}
-	l.Close()
-
-	_, port, err := net.SplitHostPort(l.Addr().String())
-	if err != nil {
-		return "", err
-	}
-
-	return port, nil
 }
