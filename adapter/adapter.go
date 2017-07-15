@@ -7,6 +7,7 @@ import (
 	"os/exec"
 )
 
+// Adapter defines the interface for an Adapter implementation
 type Adapter interface {
 	Command() *exec.Cmd
 	Start() error

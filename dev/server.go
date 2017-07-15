@@ -49,6 +49,9 @@ func (s *Server) ServeTLS(bind string) {
 	}
 }
 
+func (s *Server) Serve(bind string) {
+}
+
 func startHTTPS(handler http.Handler) *http.Server {
 	cache, err := cert.NewCertCache()
 	if err != nil {

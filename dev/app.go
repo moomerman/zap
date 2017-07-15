@@ -20,6 +20,7 @@ const appsPath = "~/.phx-dev"
 var apps map[string]*App
 var lock sync.Mutex
 
+// App holds the state of a running Application
 type App struct {
 	Host     string
 	Link     string
@@ -29,6 +30,7 @@ type App struct {
 	driver adapter.Adapter
 }
 
+// NewApp creates a new App for the given host
 func NewApp(host string) (*App, error) {
 	path := homedir.MustExpand(appsPath) + "/" + host
 	stat, err := os.Stat(path)
@@ -67,6 +69,7 @@ func NewApp(host string) (*App, error) {
 	}, nil
 }
 
+// Start starts an application and monitors activity
 func (a *App) Start() error {
 	err := a.driver.Start()
 	if err != nil {
@@ -77,8 +80,9 @@ func (a *App) Start() error {
 	return nil
 }
 
+// Stop stops an application
 func (a *App) Stop(reason string, e error) error {
-	fmt.Printf("! Stopping '%s' (%d) %s %s\n", a.Host, reason, e)
+	fmt.Printf("! Stopping '%s' %s %s\n", a.Host, reason, e)
 	lock.Lock()
 	delete(apps, a.Host)
 	lock.Unlock()
@@ -90,6 +94,7 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.driver.ServeHTTP(w, r)
 }
 
+// WriteLog writes out the application log to the given writer
 func (a *App) WriteLog(w io.Writer) {
 	a.driver.WriteLog(w)
 }
@@ -102,7 +107,7 @@ func getDriver(host, dir string) (adapter.Adapter, error) {
 	}
 
 	fmt.Println("[app]", host, "using the static driver")
-	return adapter.CreateStaticAdapter(host, dir)
+	return adapter.CreateStaticAdapter(dir)
 }
 
 func (a *App) idleMonitor() error {

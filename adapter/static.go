@@ -10,15 +10,15 @@ import (
 	"time"
 )
 
+// StaticAdapter holds the state for a static HTML application
 type StaticAdapter struct {
-	Host string
-	Dir  string
+	Dir string
 }
 
-func CreateStaticAdapter(host, dir string) (Adapter, error) {
+// CreateStaticAdapter creates a new static HTML application
+func CreateStaticAdapter(dir string) (Adapter, error) {
 	return &StaticAdapter{
-		Host: host,
-		Dir:  dir,
+		Dir: dir,
 	}, nil
 }
 
@@ -27,6 +27,7 @@ func (d *StaticAdapter) Stop() error          { return nil }
 func (d *StaticAdapter) Command() *exec.Cmd   { return nil }
 func (d *StaticAdapter) WriteLog(w io.Writer) {}
 
+// ServeHTTP implements the http.Handler interface
 func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := d.Dir + r.URL.Path
 

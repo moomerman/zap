@@ -15,6 +15,7 @@ import (
 	"github.com/vektra/errors"
 )
 
+// PhoenixAdapter holds the state for phoenix applications
 type PhoenixAdapter struct {
 	Host string
 	Dir  string
@@ -27,6 +28,7 @@ type PhoenixAdapter struct {
 	readyChan chan struct{}
 }
 
+// CreatePhoenixAdapter creates a new phoenix adapter
 func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 	return &PhoenixAdapter{
 		Host:      host,
@@ -35,10 +37,12 @@ func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 	}, nil
 }
 
+// Start starts a phoenix application
 func (d *PhoenixAdapter) Start() error {
 	return d.launch()
 }
 
+// Stop stops a phoenix application
 func (d *PhoenixAdapter) Stop() error {
 	err := d.cmd.Process.Kill()
 	if err != nil {
@@ -52,14 +56,17 @@ func (d *PhoenixAdapter) Stop() error {
 	return nil
 }
 
+// Command returns the command used to start the application
 func (d *PhoenixAdapter) Command() *exec.Cmd {
 	return d.cmd
 }
 
+// WriteLog writes out the application log to the given writer
 func (d *PhoenixAdapter) WriteLog(w io.Writer) {
 	d.log.WriteTo(w)
 }
 
+// ServeHTTP implements the http.Handler interface
 func (d *PhoenixAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[proxy]", fullURL(r), "->", d.proxy.URL)
 	d.proxy.Proxy(w, r)
