@@ -5,7 +5,7 @@ different backend applications.
 
 The interface is currently defined as
 
-```
+```go
 type Adapter interface {
 	Command() *exec.Cmd
 	Start() error
