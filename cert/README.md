@@ -22,14 +22,14 @@ Now you can create an HTTPS server that uses the root certificate to generate
 valid certificates dynamically:
 
 ```
-  cache, err := devcert.NewCache()
+  cache, err := cert.NewCache()
 
   tlsConfig := &tls.Config{
     GetCertificate: cache.GetCertificate,
   }
 ```
 
-See https://github.com/moomerman/phx-dev/tree/master/devcert/example/main.go for
+See https://github.com/moomerman/phx-dev/tree/master/cert/example/main.go for
 a full example.
 
 ## Credits

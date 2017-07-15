@@ -22,11 +22,6 @@ func CreateStaticAdapter(dir string) (Adapter, error) {
 	}, nil
 }
 
-func (d *StaticAdapter) Start() error         { return nil }
-func (d *StaticAdapter) Stop() error          { return nil }
-func (d *StaticAdapter) Command() *exec.Cmd   { return nil }
-func (d *StaticAdapter) WriteLog(w io.Writer) {}
-
 // ServeHTTP implements the http.Handler interface
 func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := d.Dir + r.URL.Path
@@ -60,3 +55,15 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[static]", fullURL(r), "->", filename)
 	http.ServeContent(w, r, filename, time.Now(), file)
 }
+
+// Start doesn't do anything
+func (d *StaticAdapter) Start() error { return nil }
+
+// Stop doesn't do anything
+func (d *StaticAdapter) Stop() error { return nil }
+
+// Command doesn't do anything
+func (d *StaticAdapter) Command() *exec.Cmd { return nil }
+
+// WriteLog doesn't do anything
+func (d *StaticAdapter) WriteLog(w io.Writer) {}

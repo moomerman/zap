@@ -26,10 +26,6 @@ func CreateProxyAdapter(host, dir, port string) (Adapter, error) {
 	}, nil
 }
 
-func (d *ProxyAdapter) Stop() error          { return nil }
-func (d *ProxyAdapter) Command() *exec.Cmd   { return nil }
-func (d *ProxyAdapter) WriteLog(w io.Writer) {}
-
 // Start starts the proxy
 func (d *ProxyAdapter) Start() error {
 	// TODO: read proxy host/port from file
@@ -44,3 +40,12 @@ func (d *ProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[proxy]", fullURL(r), "->", d.proxy.URL)
 	d.proxy.Proxy(w, r)
 }
+
+// Stop doesn't do anything
+func (d *ProxyAdapter) Stop() error { return nil }
+
+// Command doesn't do anything
+func (d *ProxyAdapter) Command() *exec.Cmd { return nil }
+
+// WriteLog doesn't do anything
+func (d *ProxyAdapter) WriteLog(w io.Writer) {}
