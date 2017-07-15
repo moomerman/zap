@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
+// Server holds the state for the HTTP and HTTPS servers
 type Server struct {
 	http  *http.Server
 	https *http.Server
@@ -32,6 +33,7 @@ func NewServer() *Server {
 	}
 }
 
+// ServeTLS starts the HTTPS server
 func (s *Server) ServeTLS(bind string) {
 	if bind == "SocketTLS" {
 		listeners, err := launch.SocketListeners(bind)
@@ -49,6 +51,7 @@ func (s *Server) ServeTLS(bind string) {
 	}
 }
 
+// Serve starts the HTTP server
 func (s *Server) Serve(bind string) {
 }
 

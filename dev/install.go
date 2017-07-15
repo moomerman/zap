@@ -14,6 +14,7 @@ import (
 const applicationName = "com.github.moomerman.phx-dev"
 const applicationShortName = "phx-dev"
 
+// Install installs the launch agent on macOS
 func Install(httpPort, tlsPort int) error {
 	binPath, err := osext.Executable()
 	if err != nil {
@@ -94,6 +95,7 @@ func Install(httpPort, tlsPort int) error {
 	return nil
 }
 
+// Uninstall removes the launch agent on macOS
 func Uninstall() {
 	plist := homedir.MustExpand("~/Library/LaunchAgents/" + applicationName + ".plist")
 

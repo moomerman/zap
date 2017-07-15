@@ -10,6 +10,7 @@ import (
 	"github.com/yhat/wsutil"
 )
 
+// MultiProxy holds the state for the HTTP proxy and WS proxy
 type MultiProxy struct {
 	URL      *url.URL
 	Hostname string
@@ -17,8 +18,9 @@ type MultiProxy struct {
 	wsproxy  *wsutil.ReverseProxy
 }
 
-func NewProxy(targetUrl string, hostname string) *MultiProxy {
-	target, err := url.Parse(targetUrl)
+// NewProxy returns a new multiproxy
+func NewProxy(targetURL string, hostname string) *MultiProxy {
+	target, err := url.Parse(targetURL)
 	if err != nil {
 		panic(err) // TODO: remove this!
 	}
@@ -65,6 +67,7 @@ func NewProxy(targetUrl string, hostname string) *MultiProxy {
 	}
 }
 
+// Proxy determines whether to proxy a HTTP request or a WS one
 func (p *MultiProxy) Proxy(w http.ResponseWriter, r *http.Request) {
 	if r.TLS != nil {
 		r.Header.Set("x-forwarded-proto", "https")

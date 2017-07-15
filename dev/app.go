@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/phx-dev/adapter"
+	"github.com/moomerman/phx-dev/adapters"
 	"github.com/puma/puma-dev/homedir"
 	"github.com/vektra/errors"
 )
@@ -27,7 +27,7 @@ type App struct {
 	Dir      string
 	LastUsed time.Time
 
-	driver adapter.Adapter
+	adapter adapters.Adapter
 }
 
 // NewApp creates a new App for the given host
@@ -39,7 +39,7 @@ func NewApp(host string) (*App, error) {
 	}
 
 	var dir string
-	var driver adapter.Adapter
+	var adapter adapters.Adapter
 
 	if stat.IsDir() {
 		dir, err = os.Readlink(path)
@@ -47,31 +47,31 @@ func NewApp(host string) (*App, error) {
 			return nil, err
 		}
 
-		driver, err = getDriver(host, dir)
+		adapter, err = getAdapter(host, dir)
 		if err != nil {
-			return nil, errors.Context(err, "could not determine driver")
+			return nil, errors.Context(err, "could not determine adapter")
 		}
 	} else {
-		fmt.Println("[app]", host, "using the proxy driver")
+		fmt.Println("[app]", host, "using the proxy adapter")
 		// TODO: read the proxy host/port from the file
 		// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L473
-		driver, err = adapter.CreateProxyAdapter(host, "80")
+		adapter, err = adapters.CreateProxyAdapter(host, "80")
 		if err != nil {
-			return nil, errors.Context(err, "unable to create proxy driver")
+			return nil, errors.Context(err, "unable to create proxy adapter")
 		}
 	}
 
 	return &App{
-		Host:   host,
-		Link:   path,
-		Dir:    dir,
-		driver: driver,
+		Host:    host,
+		Link:    path,
+		Dir:     dir,
+		adapter: adapter,
 	}, nil
 }
 
 // Start starts an application and monitors activity
 func (a *App) Start() error {
-	err := a.driver.Start()
+	err := a.adapter.Start()
 	if err != nil {
 		return err
 	}
@@ -86,28 +86,28 @@ func (a *App) Stop(reason string, e error) error {
 	lock.Lock()
 	delete(apps, a.Host)
 	lock.Unlock()
-	return a.driver.Stop()
+	return a.adapter.Stop()
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.LastUsed = time.Now()
-	a.driver.ServeHTTP(w, r)
+	a.adapter.ServeHTTP(w, r)
 }
 
 // WriteLog writes out the application log to the given writer
 func (a *App) WriteLog(w io.Writer) {
-	a.driver.WriteLog(w)
+	a.adapter.WriteLog(w)
 }
 
-func getDriver(host, dir string) (adapter.Adapter, error) {
+func getAdapter(host, dir string) (adapters.Adapter, error) {
 	_, err := os.Stat(path.Join(dir, "mix.exs"))
 	if err == nil {
-		fmt.Println("[app]", host, "using the phoenix driver (found mix.exs)")
-		return adapter.CreatePhoenixAdapter(host, dir)
+		fmt.Println("[app]", host, "using the phoenix adapter (found mix.exs)")
+		return adapters.CreatePhoenixAdapter(host, dir)
 	}
 
-	fmt.Println("[app]", host, "using the static driver")
-	return adapter.CreateStaticAdapter(dir)
+	fmt.Println("[app]", host, "using the static adapter")
+	return adapters.CreateStaticAdapter(dir)
 }
 
 func (a *App) idleMonitor() error {
