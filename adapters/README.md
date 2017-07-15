@@ -25,31 +25,33 @@ interface.
 A proxy is configured by creating a file in the `~/.phx-dev` folder with the
 host/port combination that you want to proxy to.
 
-eg. `echo "http://127.0.0.1:3000" > ~/.phx-dev/mysite.dev`
+`echo "http://127.0.0.1:3000" > ~/.phx-dev/mysite.dev`
 
 ### Elixir/Phoenix
 
 To configure a phoenix application simply create a symbolic link to the
 phoenix application and update your `config/dev.exs` file to allow phx-dev
-to override the default 4000 http port.  Eg.
+to override the default 4000 http port.
 
+`ln -sf /path/to/phoenix/app ~/.phx-dev/mysite.dev`
+
+`config/mix.exs`
 ```
 config :web_app, Your.Web.Endpoint,
   http: [port: System.get_env("PHX_PORT") || 4000],
 ```
 
 When a `mix.exs` file is detected in the root of the dir that the symlink points to
-and contains the `phoenix` package then a phoenix server will be launched
+and contains the `phoenix` package then a `mix phx.server` server will be launched
 on a random port and requests will be proxied to that application.
-
-eg. `ln -sf /path/to/phoenix/app ~/.phx-dev/mysite.dev`
 
 ### Static HTML
 
 To enable a static HTML site, simply symlink to a the public directory
-where the static files live.
+where the static files live.  Files in the directory will be served, if a directory
+root is requested `index.html` files will be served if they exist.
 
-eg. `ln -sf /path/to/static/public ~/.phx-dev/mysite.dev`
+`ln -sf /path/to/static/public ~/.phx-dev/mysite.dev`
 
 ## TODO
 
