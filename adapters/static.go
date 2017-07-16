@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// StaticAdapter holds the state for a static HTML application
+// StaticAdapter holds the state for the application
 type StaticAdapter struct {
 	Dir string
 }

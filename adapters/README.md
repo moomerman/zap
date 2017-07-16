@@ -59,7 +59,10 @@ root is requested `index.html` files will be served if they exist.
 
 * Ruby/Rails
 * Ruby/Hanami
-* Ruby/Rack ?
+* Ruby/Rack
+* Ruby/Rakefile
+* Docker (Compose)
+* Procfile
 * Go/Buffalo
-* Node ?
-* PHP ?
+* Node/package.json
+* PHP

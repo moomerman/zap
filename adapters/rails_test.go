@@ -1,16 +1,16 @@
 package adapters
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"testing"
+	"time"
 )
 
-func TestElixirPhoenix(t *testing.T) {
+func TestRubyRails(t *testing.T) {
 
-	adapter, err := CreatePhoenixAdapter("phoenix.test", "./test/phoenix1.3")
+	adapter, err := CreateRailsAdapter("localhost", "./test/rails5.1")
 	if err != nil {
 		panic(err)
 	}
@@ -18,6 +18,7 @@ func TestElixirPhoenix(t *testing.T) {
 	if err = adapter.Start(); err != nil {
 		panic(err)
 	}
+	time.Sleep(5 * time.Second)
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
@@ -32,11 +33,12 @@ func TestElixirPhoenix(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	re := "Hello PhoenixTest!"
+	re := "Ruby on Rails"
 	match := true
 	if got := regexp.MustCompile(re).Match(rr.Body.Bytes()); got != match {
 		t.Errorf("%s: ~ /%s/ = %v, want %v", rr.Body, re, got, match)
 	}
 
-	fmt.Println(rr)
+	adapter.Stop()
+	time.Sleep(5 * time.Second)
 }

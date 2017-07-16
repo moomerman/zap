@@ -15,7 +15,7 @@ import (
 	"github.com/vektra/errors"
 )
 
-// PhoenixAdapter holds the state for phoenix applications
+// PhoenixAdapter holds the state for the application
 type PhoenixAdapter struct {
 	Host string
 	Dir  string
@@ -37,9 +37,33 @@ func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 	}, nil
 }
 
+const phoenixShellCommand = `exec bash -c '
+cd %s
+exec mix do deps.get, phx.server'
+`
+
 // Start starts a phoenix application
 func (d *PhoenixAdapter) Start() error {
-	return d.launch()
+	port, err := findAvailablePort()
+	if err != nil {
+		return errors.Context(err, "couldn't find available port")
+	}
+
+	d.Port = port
+
+	if err := d.startApplication(phoenixShellCommand); err != nil {
+		return errors.Context(err, "could not start application")
+	}
+
+	d.proxy = multiproxy.NewProxy("http://127.0.0.1:"+d.Port, d.Host)
+
+	go d.tail()
+
+	if err := d.wait(); err != nil {
+		return errors.Context(err, "waiting for applicaftion to start")
+	}
+
+	return nil
 }
 
 // Stop stops a phoenix application
@@ -72,23 +96,11 @@ func (d *PhoenixAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	d.proxy.Proxy(w, r)
 }
 
-const executionShell = `exec bash -c '
-cd %s
-exec mix do deps.get, phx.server'
-`
-
-func (d *PhoenixAdapter) launch() error {
+func (d *PhoenixAdapter) startApplication(command string) error {
 	shell := os.Getenv("SHELL")
 
-	port, err := findAvailablePort()
-	if err != nil {
-		return errors.Context(err, "couldn't find available port")
-	}
-
-	d.Port = port
-
 	cmd := exec.Command(shell, "-l", "-i", "-c",
-		fmt.Sprintf(executionShell, d.Dir))
+		fmt.Sprintf(command, d.Dir))
 
 	cmd.Dir = d.Dir
 
@@ -105,21 +117,11 @@ func (d *PhoenixAdapter) launch() error {
 	d.stdout = stdout
 	cmd.Stderr = cmd.Stdout
 
-	err = cmd.Start()
-	if err != nil {
+	if err = cmd.Start(); err != nil {
 		return errors.Context(err, "starting app")
 	}
 
 	d.cmd = cmd
-	d.proxy = multiproxy.NewProxy("http://127.0.0.1:"+d.Port, d.Host)
-
-	go d.tail()
-
-	err = d.wait()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -176,12 +178,4 @@ func (d *PhoenixAdapter) wait() error {
 		close(d.readyChan)
 		return errors.New("time out waiting for app to start")
 	}
-}
-
-func fullURL(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-	return fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
 }

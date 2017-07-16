@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -29,4 +30,12 @@ func findAvailablePort() (string, error) {
 	}
 
 	return port, nil
+}
+
+func fullURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	return fmt.Sprint(r.Method, " ", r.Proto, " ", scheme+"://", r.Host, r.URL)
 }

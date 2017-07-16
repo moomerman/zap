@@ -9,7 +9,7 @@ import (
 	"github.com/moomerman/phx-dev/multiproxy"
 )
 
-// ProxyAdapter holds the state for a simple proxy
+// ProxyAdapter holds the state for the application
 type ProxyAdapter struct {
 	Host  string
 	Port  string
