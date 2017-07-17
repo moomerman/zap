@@ -10,7 +10,7 @@ import (
 
 func TestRubyRails(t *testing.T) {
 
-	adapter, err := CreateRailsAdapter("localhost", "./test/rails5.1")
+	adapter, err := CreateRailsAdapter("rails.test", "./test/rails5.1")
 	if err != nil {
 		panic(err)
 	}
@@ -18,7 +18,7 @@ func TestRubyRails(t *testing.T) {
 	if err = adapter.Start(); err != nil {
 		panic(err)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
@@ -40,5 +40,5 @@ func TestRubyRails(t *testing.T) {
 	}
 
 	adapter.Stop()
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 }

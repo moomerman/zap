@@ -135,7 +135,7 @@ func (d *PhoenixAdapter) tail() error {
 			line, err := r.ReadString('\n')
 			if line != "" {
 				d.log.Append(line)
-				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", d.Host, d.Port, d.cmd.Process.Pid, line)
+				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", d.Host, d.Port, d.cmd.Process.Pid, line)
 
 				mustRestart, _ := regexp.Compile("You must restart your server")
 				if mustRestart.MatchString(line) {

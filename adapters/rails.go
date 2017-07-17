@@ -130,7 +130,7 @@ func (a *RailsAdapter) tail() error {
 			line, err := r.ReadString('\n')
 			if line != "" {
 				a.log.Append(line)
-				fmt.Fprintf(os.Stdout, "  [app] %s:%s[%d]: %s", a.Host, a.Port, a.cmd.Process.Pid, line)
+				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, a.cmd.Process.Pid, line)
 
 				ready, _ := regexp.Compile("Listening on tcp") // TODO: also grep for the host/port
 				if ready.MatchString(line) {
