@@ -13,7 +13,7 @@ var (
 	fInstall   = flag.Bool("install", false, "Install the server")
 	fUninstall = flag.Bool("uninstall", false, "Uninstall the server")
 	fLaunchd   = flag.Bool("launchd", false, "Server is running via launchd")
-	fHTTPPort  = flag.Int("http-port", 8080, "port to listen on for HTTP requests")
+	fHTTPPort  = flag.Int("http-port", 80, "port to listen on for HTTP requests")
 	fHTTPSPort = flag.Int("https-port", 443, "port to listen on for HTTPS requests")
 )
 
