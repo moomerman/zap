@@ -59,7 +59,7 @@ func (a *RailsAdapter) Start() error {
 	go a.tail()
 
 	if err := a.wait(); err != nil {
-		return errors.Context(err, "waiting for applicaftion to start")
+		return errors.Context(err, "waiting for application to start")
 	}
 
 	return nil
@@ -67,6 +67,7 @@ func (a *RailsAdapter) Start() error {
 
 // Stop stops the application
 func (a *RailsAdapter) Stop() error {
+	// TODO: use a lock so only one goroutine can try and stop at one time?
 	err := a.cmd.Process.Kill()
 	if err != nil {
 		fmt.Printf("! Error trying to stop %s: %s", a.Host, err)
@@ -157,6 +158,10 @@ func (a *RailsAdapter) tail() error {
 
 	return err
 }
+
+// replace tail with a generic function that just waits until the http port
+// is open and then closes the readyChan so it can be shared
+// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L318
 
 func (a *RailsAdapter) wait() error {
 	select {
