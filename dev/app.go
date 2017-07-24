@@ -106,6 +106,12 @@ func getAdapter(host, dir string) (adapters.Adapter, error) {
 		return adapters.CreatePhoenixAdapter(host, dir)
 	}
 
+	_, err = os.Stat(path.Join(dir, "Gemfile"))
+	if err == nil {
+		fmt.Println("[app]", host, "using the rails adapter (found Gemfile)")
+		return adapters.CreateRailsAdapter(host, dir)
+	}
+
 	fmt.Println("[app]", host, "using the static adapter")
 	return adapters.CreateStaticAdapter(dir)
 }
