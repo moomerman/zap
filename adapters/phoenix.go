@@ -149,6 +149,9 @@ func (d *PhoenixAdapter) tail() error {
 				}
 			}
 
+			// TODO: handle installing js assets?
+			// [error] Could not start node watcher because script "/Users/richard/workspace/moocode/hoot/apps/web/assets/node_modules/brunch/bin/brunch" does not exist. Your Phoenix application is still running, however assets won't be compiled. You may fix this by running "cd assets && npm install"
+
 			if err != nil {
 				c <- err
 				return
