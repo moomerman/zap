@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/phx-dev/adapters"
+	"github.com/moomerman/zap/adapters"
 	"github.com/puma/puma-dev/homedir"
 	"github.com/vektra/errors"
 )
 
-const appsPath = "~/.phx-dev"
+const appsPath = "~/.zap"
 
 var apps map[string]*App
 var lock sync.Mutex

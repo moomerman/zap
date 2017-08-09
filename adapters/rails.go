@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/moomerman/phx-dev/multiproxy"
+	"github.com/moomerman/zap/multiproxy"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )

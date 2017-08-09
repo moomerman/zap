@@ -22,12 +22,12 @@ interface.
 
 ### Simple Proxy
 
-A proxy is configured by creating a file in the `~/.phx-dev` folder containing the
+A proxy is configured by creating a file in the `~/.zap` folder containing the
 host/port combination that you want to proxy to.  You can specify just a port and
 it will assume localhost.
 
-`echo "http://127.0.0.1:3000" > ~/.phx-dev/mysite.dev`
-`echo "4000" > ~/.phx-dev/othersite.dev`
+`echo "http://127.0.0.1:3000" > ~/.zap/mysite.dev`
+`echo "4000" > ~/.zap/othersite.dev`
 
 ### Elixir/Phoenix
 
@@ -36,10 +36,10 @@ and contains the `phoenix` package then a `mix phx.server` server will be launch
 on a random port and requests will be proxied to that application.
 
 To configure a phoenix application simply create a symbolic link to the
-phoenix application and update your `config/dev.exs` file to allow phx-dev
+phoenix application and update your `config/dev.exs` file to allow zap
 to override the default 4000 http port.
 
-`ln -sf /path/to/phoenix/app ~/.phx-dev/mysite.dev`
+`ln -sf /path/to/phoenix/app ~/.zap/mysite.dev`
 
 `config/mix.exs`
 ```elixir
@@ -53,7 +53,7 @@ To enable a static HTML site, simply symlink to a the public directory
 where the static files live.  Files in the directory will be served, if a directory
 root is requested `index.html` files will be served if they exist.
 
-`ln -sf /path/to/static/public ~/.phx-dev/mysite.dev`
+`ln -sf /path/to/static/public ~/.zap/mysite.dev`
 
 ## TODO
 

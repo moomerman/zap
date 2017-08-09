@@ -56,7 +56,7 @@ func CreateCert() error {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"Developer Certificate"},
-			CommonName:   "phx-dev CA",
+			CommonName:   "zap CA",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
@@ -161,7 +161,7 @@ func makeCert(parent *tls.Certificate, name string) (*tls.Certificate, error) {
 	cert := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"phx-dev Signed"},
+			Organization: []string{"zap Signed"},
 			CommonName:   name,
 		},
 		NotBefore:   notBefore,

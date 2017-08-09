@@ -1,4 +1,4 @@
-# phx-dev - A development server for phoenix applications
+# zap - A development server for web applications
 
 ## Features
 
@@ -10,7 +10,7 @@
 
 Add an application
 
-`ln -sf /path/to/phoenix/app ~/.phx-dev`
+`ln -sf /path/to/phoenix/app ~/.zap`
 
 Configure (optional)
 

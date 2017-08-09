@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os/exec"
 
-	"github.com/moomerman/phx-dev/multiproxy"
+	"github.com/moomerman/zap/multiproxy"
 )
 
 // ProxyAdapter holds the state for the application

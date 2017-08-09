@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/moomerman/phx-dev/cert"
+	"github.com/moomerman/zap/cert"
 	"github.com/puma/puma-dev/dev/launch"
 	"golang.org/x/net/http2"
 )
@@ -20,8 +20,8 @@ type Server struct {
 // NewServer starts the HTTP and HTTPS proxy servers
 func NewServer() *Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/phx/log", logHandler())
-	mux.HandleFunc("/phx/status", statusHandler())
+	mux.HandleFunc("/zap/log", logHandler())
+	mux.HandleFunc("/zap/status", statusHandler())
 	mux.HandleFunc("/", appHandler())
 
 	http := startHTTP(mux)

@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-const supportDir = "~/Library/Application Support/com.github.moomerman.phx-dev"
+const supportDir = "~/Library/Application Support/com.github.moomerman.zap"
 
 func installCert(cert string) error {
 	fmt.Printf("* Adding certification to system keychain as trusted\n")

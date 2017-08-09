@@ -5,8 +5,8 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/moomerman/phx-dev/cert"
-	"github.com/moomerman/phx-dev/dev"
+	"github.com/moomerman/zap/cert"
+	"github.com/moomerman/zap/dev"
 )
 
 var (

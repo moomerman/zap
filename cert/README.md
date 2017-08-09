@@ -29,7 +29,7 @@ valid certificates dynamically:
   }
 ```
 
-See https://github.com/moomerman/phx-dev/tree/master/cert/example/main.go for
+See https://github.com/moomerman/zap/tree/master/cert/example/main.go for
 a full example.
 
 ## Credits

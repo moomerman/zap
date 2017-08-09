@@ -11,8 +11,8 @@ import (
 	"github.com/vektra/errors"
 )
 
-const applicationName = "com.github.moomerman.phx-dev"
-const applicationShortName = "phx-dev"
+const applicationName = "com.github.moomerman.zap"
+const applicationShortName = "zap"
 
 // Install installs the launch agent on macOS
 func Install(httpPort, tlsPort int) error {
@@ -21,7 +21,7 @@ func Install(httpPort, tlsPort int) error {
 		return errors.Context(err, "calculating executable path")
 	}
 
-	fmt.Printf("* Use '%s' as the location of phx-dev\n", binPath)
+	fmt.Printf("* Use '%s' as the location of zap\n", binPath)
 
 	var userTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/moomerman/phx-dev/cert"
+	"github.com/moomerman/zap/cert"
 )
 
 func main() {
