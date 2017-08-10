@@ -29,19 +29,19 @@
   branch = "master"
   name = "github.com/yhat/wsutil"
   packages = ["."]
-  revision = "666b94ea38f279dc3ac060200f708ec2d39abdce"
+  revision = "1d66fa95c997864ba4d8479f56609620fe542928"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["http2","http2/hpack","idna","lex/httplex"]
-  revision = "ab5485076ff3407ad2d02db054635913f017b0ed"
+  revision = "1c05540f6879653db88113bc4a2b70aec4bd491f"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "836efe42bb4aa16aaa17b9c155d8813d336ed720"
+  revision = "3bd178b88a8180be2df394a1fbb81313916f0e7b"
 
 [solve-meta]
   analyzer-name = "dep"
