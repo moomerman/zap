@@ -1,4 +1,4 @@
-package main
+package cert_test
 
 import (
 	"crypto/tls"
@@ -9,7 +9,7 @@ import (
 	"github.com/moomerman/zap/cert"
 )
 
-func main() {
+func Example() {
 	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("Unable to create new cert cache", err)
