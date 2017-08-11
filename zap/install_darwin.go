@@ -11,8 +11,8 @@ import (
 	"github.com/vektra/errors"
 )
 
-const applicationName = "com.github.moomerman.zap"
-const applicationShortName = "zap"
+const applicationName = "com.github.moomerman.zapd"
+const applicationShortName = "zapd"
 
 // Install installs the launch agent on macOS
 func Install(httpPort, tlsPort int) error {
