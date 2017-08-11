@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/moomerman/zap/cert"
-	"github.com/moomerman/zap/dev"
+	"github.com/moomerman/zap/zap"
 )
 
 var (
