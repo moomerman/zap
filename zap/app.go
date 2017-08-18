@@ -112,6 +112,12 @@ func getAdapter(host, dir string) (adapters.Adapter, error) {
 		return adapters.CreateRailsAdapter(host, dir)
 	}
 
+	_, err = os.Stat(path.Join(dir, ".buffalo.dev.yml"))
+	if err == nil {
+		fmt.Println("[app]", host, "using the buffalo adapter (found .buffalo.dev.yml)")
+		return adapters.CreateBuffaloAdapter(host, dir)
+	}
+
 	fmt.Println("[app]", host, "using the static adapter")
 	return adapters.CreateStaticAdapter(dir)
 }
