@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
 	"time"
 
 	"github.com/moomerman/zap/multiproxy"
@@ -57,6 +57,7 @@ func (a *RailsAdapter) Start() error {
 	a.proxy = multiproxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
 
 	go a.tail()
+	go a.checkPort()
 
 	if err := a.wait(); err != nil {
 		return errors.Context(err, "waiting for application to start")
@@ -70,13 +71,13 @@ func (a *RailsAdapter) Stop() error {
 	// TODO: use a lock so only one goroutine can try and stop at one time?
 	err := a.cmd.Process.Kill()
 	if err != nil {
-		fmt.Printf("! Error trying to stop %s: %s", a.Host, err)
+		fmt.Printf("  [app] error trying to stop %s: %s", a.Host, err)
 		return err
 	}
 
 	a.cmd.Wait()
 
-	fmt.Printf("* App '%s' shutdown and cleaned up\n", a.Host)
+	fmt.Println("  [app] shutdown and cleaned up", a.Host, err)
 	return nil
 }
 
@@ -103,7 +104,7 @@ func (a *RailsAdapter) startApplication(command string) error {
 	cmd.Dir = a.Dir
 
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("PHX_PORT=%s", a.Port))
+	// cmd.Env = append(cmd.Env, fmt.Sprintf("PHX_PORT=%s", a.Port))
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -132,11 +133,6 @@ func (a *RailsAdapter) tail() error {
 			if line != "" {
 				a.log.Append(line)
 				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, a.cmd.Process.Pid, line)
-
-				ready, _ := regexp.Compile("Listening on tcp") // TODO: also grep for the host/port
-				if ready.MatchString(line) {
-					close(a.readyChan)
-				}
 			}
 
 			if err != nil {
@@ -159,10 +155,6 @@ func (a *RailsAdapter) tail() error {
 	return err
 }
 
-// replace tail with a generic function that just waits until the http port
-// is open and then closes the readyChan so it can be shared
-// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L318
-
 func (a *RailsAdapter) wait() error {
 	select {
 	case <-a.readyChan:
@@ -171,5 +163,24 @@ func (a *RailsAdapter) wait() error {
 	case <-time.After(time.Second * 30):
 		close(a.readyChan)
 		return errors.New("time out waiting for app to start")
+	}
+}
+
+func (a *RailsAdapter) checkPort() {
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-a.readyChan:
+			return
+		case <-ticker.C:
+			c, err := net.Dial("tcp", ":"+a.Port)
+			if err == nil {
+				c.Close()
+				close(a.readyChan)
+				return
+			}
+		}
 	}
 }
