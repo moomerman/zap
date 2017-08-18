@@ -1,4 +1,4 @@
-# zap - A development server for web applications
+# ⚡zap - A development server for web applications
 
 ## Features
 
