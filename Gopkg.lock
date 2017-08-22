@@ -41,7 +41,7 @@
   branch = "master"
   name = "golang.org/x/text"
   packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "3bd178b88a8180be2df394a1fbb81313916f0e7b"
+  revision = "e56139fd9c5bc7244c76116c68e500765bb6db6b"
 
 [solve-meta]
   analyzer-name = "dep"
