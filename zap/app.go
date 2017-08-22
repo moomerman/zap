@@ -27,9 +27,7 @@ var lock sync.Mutex
 
 // App holds the state of a running Application
 type App struct {
-	Host     string // TODO: remove me!
-	Link     string
-	Dir      string
+	Config   *HostConfig
 	LastUsed time.Time
 
 	adapter adapters.Adapter
@@ -45,40 +43,24 @@ type HostConfig struct {
 }
 
 // NewApp creates a new App for the given host
-func NewApp(host string) (*App, error) {
-	path := homedir.MustExpand(appsPath) + "/" + host
-	stat, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var dir string
+func NewApp(config *HostConfig) (*App, error) {
 	var adapter adapters.Adapter
+	var err error
 
-	if stat.IsDir() {
-		dir, err = os.Readlink(path)
-		if err != nil {
-			return nil, err
-		}
-
-		adapter, err = getAdapter(host, dir)
+	if config.Dir != "" {
+		adapter, err = getAdapter(config)
 		if err != nil {
 			return nil, errors.Context(err, "could not determine adapter")
 		}
 	} else {
-		fmt.Println("[app]", host, "using the proxy adapter")
-		// TODO: read the proxy host/port from the file
-		// see https://github.com/puma/puma-dev/blob/master/dev/app.go#L473
-		adapter, err = adapters.CreateProxyAdapter(host, "80")
+		adapter, err = adapters.CreateProxyAdapter(config.Host, config.Content)
 		if err != nil {
 			return nil, errors.Context(err, "unable to create proxy adapter")
 		}
 	}
 
 	return &App{
-		Host:    host,
-		Link:    path,
-		Dir:     dir,
+		Config:  config,
 		adapter: adapter,
 	}, nil
 }
@@ -96,9 +78,9 @@ func (a *App) Start() error {
 
 // Stop stops an application
 func (a *App) Stop(reason string, e error) error {
-	fmt.Printf("! Stopping '%s' %s %s\n", a.Host, reason, e)
+	fmt.Printf("! Stopping '%s' %s %s\n", a.Config.Host, reason, e)
 	lock.Lock()
-	delete(apps, a.Host)
+	delete(apps, a.Config.Key)
 	lock.Unlock()
 	return a.adapter.Stop()
 }
@@ -113,31 +95,31 @@ func (a *App) WriteLog(w io.Writer) {
 	a.adapter.WriteLog(w)
 }
 
-func getAdapter(host, dir string) (adapters.Adapter, error) {
-	_, err := os.Stat(path.Join(dir, "mix.exs"))
+func getAdapter(config *HostConfig) (adapters.Adapter, error) {
+	_, err := os.Stat(path.Join(config.Dir, "mix.exs"))
 	if err == nil {
-		fmt.Println("[app]", host, "using the phoenix adapter (found mix.exs)")
-		return adapters.CreatePhoenixAdapter(host, dir)
+		fmt.Println("[app]", config.Host, "using the phoenix adapter (found mix.exs)")
+		return adapters.CreatePhoenixAdapter(config.Host, config.Dir)
 	}
 
-	_, err = os.Stat(path.Join(dir, "Gemfile"))
+	_, err = os.Stat(path.Join(config.Dir, "Gemfile"))
 	if err == nil {
-		fmt.Println("[app]", host, "using the rails adapter (found Gemfile)")
-		return adapters.CreateRailsAdapter(host, dir)
+		fmt.Println("[app]", config.Host, "using the rails adapter (found Gemfile)")
+		return adapters.CreateRailsAdapter(config.Host, config.Dir)
 	}
 
-	_, err = os.Stat(path.Join(dir, ".buffalo.dev.yml"))
+	_, err = os.Stat(path.Join(config.Dir, ".buffalo.dev.yml"))
 	if err == nil {
-		fmt.Println("[app]", host, "using the buffalo adapter (found .buffalo.dev.yml)")
-		return adapters.CreateBuffaloAdapter(host, dir)
+		fmt.Println("[app]", config.Host, "using the buffalo adapter (found .buffalo.dev.yml)")
+		return adapters.CreateBuffaloAdapter(config.Host, config.Dir)
 	}
 
-	fmt.Println("[app]", host, "using the static adapter")
-	return adapters.CreateStaticAdapter(dir)
+	fmt.Println("[app]", config.Host, "using the static adapter")
+	return adapters.CreateStaticAdapter(config.Dir)
 }
 
 func (a *App) idleMonitor() error {
-	fmt.Println("[app]", a.Host, "starting idle monitor")
+	fmt.Println("[app]", a.Config.Host, "starting idle monitor")
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -185,7 +167,7 @@ func findAppForHost(host string) (*App, error) {
 
 	fmt.Println("[app]", host, config.Key, "creating app")
 
-	app, err = NewApp(host)
+	app, err = NewApp(config)
 	if err != nil {
 		fmt.Println("[app]", host, config.Key, "error creating app", err)
 		return nil, errors.Context(err, "app failed to create")
@@ -264,6 +246,6 @@ func getHostConfig(host string) (*HostConfig, error) {
 		Host:    host,
 		Path:    path,
 		Content: proxy,
-		Key:     proxy,
+		Key:     host + "->" + proxy, // FIXME: host is coded in the proxy so we need one per host source
 	}, nil
 }
