@@ -1,11 +1,16 @@
 package dev
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,12 +27,21 @@ var lock sync.Mutex
 
 // App holds the state of a running Application
 type App struct {
-	Host     string
+	Host     string // TODO: remove me!
 	Link     string
 	Dir      string
 	LastUsed time.Time
 
 	adapter adapters.Adapter
+}
+
+// HostConfig holds the configuration for a given host host
+type HostConfig struct {
+	Host    string
+	Path    string
+	Dir     string
+	Content string
+	Key     string
 }
 
 // NewApp creates a new App for the given host
@@ -152,39 +166,104 @@ func findAppForHost(host string) (*App, error) {
 	hostParts := strings.Split(host, ":")
 	host = hostParts[0]
 
+	config, err := getHostConfig(host)
+	if err != nil {
+		return nil, err
+	}
+
 	lock.Lock()
 	if apps == nil {
 		apps = make(map[string]*App)
 	}
 
-	app := apps[host]
+	app := apps[config.Key]
 	lock.Unlock()
 
 	if app != nil {
 		return app, nil
 	}
 
-	fmt.Println("[app]", host, "creating app")
+	fmt.Println("[app]", host, config.Key, "creating app")
 
-	app, err := NewApp(host)
+	app, err = NewApp(host)
 	if err != nil {
-		fmt.Println("[app]", host, "error creating app", err)
+		fmt.Println("[app]", host, config.Key, "error creating app", err)
 		return nil, errors.Context(err, "app failed to create")
 	}
 
 	err = app.Start()
 	if err != nil {
-		fmt.Println("[app]", host, "error starting app", err)
+		fmt.Println("[app]", host, config.Key, "error starting app", err)
 		app.Stop("app failed to start", err)
 		return nil, errors.Context(err, "app failed to start")
 	}
 
-	fmt.Println("[app]", host, "created app")
-	// TODO: apps should be keyed by Dir not host as you might have multiple
-	// hosts pointing to the same app
+	fmt.Println("[app]", host, config.Key, "created app")
+
 	lock.Lock()
-	apps[host] = app
+	apps[config.Key] = app
 	lock.Unlock()
 
 	return app, nil
+}
+
+func getHostConfig(host string) (*HostConfig, error) {
+	path := homedir.MustExpand(appsPath) + "/" + host
+	stat, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if stat.IsDir() {
+		dir, err := os.Readlink(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return &HostConfig{
+			Host: host,
+			Path: path,
+			Dir:  dir,
+			Key:  dir,
+		}, nil
+	}
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	data = bytes.TrimSpace(data)
+
+	var proxy string
+
+	port, err := strconv.Atoi(string(data))
+	if err == nil {
+		proxy = "http://127.0.0.1:" + strconv.Itoa(port)
+	} else {
+		u, err := url.Parse(string(data))
+		if err != nil {
+			return nil, err
+		}
+
+		host, sport, err := net.SplitHostPort(u.Host)
+		if err == nil {
+			port, err = strconv.Atoi(sport)
+			if err != nil {
+				return nil, err
+			}
+			proxy = u.Scheme + "://" + host + ":" + strconv.Itoa(port)
+		} else {
+			host = u.Host
+			proxy = u.Scheme + "://" + host
+		}
+
+	}
+
+	return &HostConfig{
+		Host:    host,
+		Path:    path,
+		Content: proxy,
+		Key:     proxy,
+	}, nil
 }
