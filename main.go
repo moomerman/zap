@@ -26,7 +26,7 @@ func main() {
 			log.Fatal("Unable to install self-signed certificate", err)
 		}
 
-		err = dev.Install(*fHTTPPort, *fHTTPSPort)
+		err = zap.Install(*fHTTPPort, *fHTTPSPort)
 		if err != nil {
 			log.Fatal("Unable to install daemon", err)
 		}
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	if *fUninstall {
-		dev.Uninstall()
+		zap.Uninstall()
 		return
 	}
 
@@ -49,7 +49,7 @@ func main() {
 		httpsPort = ":" + strconv.Itoa(*fHTTPSPort)
 	}
 
-	server := dev.NewServer()
+	server := zap.NewServer()
 
 	go server.Serve(httpPort)
 	server.ServeTLS(httpsPort)
