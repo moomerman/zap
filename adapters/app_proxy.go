@@ -92,7 +92,7 @@ func (a *AppProxyAdapter) startApplication(command string) error {
 	shell := os.Getenv("SHELL")
 
 	cmd := exec.Command(shell, "-l", "-i", "-c",
-		fmt.Sprintf(command, a.Port))
+		fmt.Sprintf(command, a.Port, a.Host))
 
 	cmd.Dir = a.Dir
 

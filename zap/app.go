@@ -99,6 +99,12 @@ func getAdapter(config *HostConfig) (adapters.Adapter, error) {
 		return adapters.CreateBuffaloAdapter(config.Host, config.Dir)
 	}
 
+	_, err = os.Stat(path.Join(config.Dir, "config.toml"))
+	if err == nil {
+		fmt.Println("[app]", config.Host, "using the hugo adapter (found config.toml)")
+		return adapters.CreateHugoAdapter(config.Host, config.Dir)
+	}
+
 	fmt.Println("[app]", config.Host, "using the static adapter")
 	return adapters.CreateStaticAdapter(config.Dir)
 }
