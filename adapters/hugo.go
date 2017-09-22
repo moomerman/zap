@@ -1,7 +1,7 @@
 package adapters
 
 const hugoShellCommand = `exec bash -c '
-exec hugo server -p %s -b https://%s/ --appendPort=false'
+exec hugo server -D -p %s -b https://%s/ --appendPort=false'
 `
 
 // CreateHugoAdapter creates a new hugo adapter
