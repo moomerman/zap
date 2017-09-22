@@ -1,33 +1,29 @@
-# ⚡zap - A development server for web applications
+# ⚡ Zap - A development web/proxy server
+
+## About
+
+Zap is a development web/proxy server that knows how to start and manage your
+development server processes, and provides SSL access to them.
+
+Zap knows how to manage a number of `Backends` including:
+
+* Elixir/Phoenix
+* Ruby/Rails
+* Go/Buffalo
+* Go/Hugo
+* Simple Proxy
+* Static HTML
 
 ## Features
 
+* SSL - creates a self-signed cert for each domain so you can test SSL in dev
 * Process management - start, monitor, spin down idle apps
 * Log watching - watches log files and restarts application on certain triggers
-* SSL - creates a self-signed cert for each domain so you can test SSL in dev
-
-## Usage
-
-Add an application
-
-`ln -sf /path/to/phoenix/app ~/.zap`
-
-Configure (optional)
-
-```
-PORT=4001
-CMD=mix phx.server
-```
-
-Hosts
-
-```
-127.0.0.1 yourapp.phx
-```
 
 ## Wishlist
 
-* Linux, Windows Support
+* Linux Suport
+* Windows Support
 * Status UI
 
 ## Credits

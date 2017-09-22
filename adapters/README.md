@@ -47,6 +47,21 @@ config :your_app, YourApp.Web.Endpoint,
   http: [port: System.get_env("PHX_PORT") || 4000],
 ```
 
+### Ruby/Rails
+
+If a `Gemfile` is detected in the root of the project then the Ruby/Rails
+adapter is used.
+
+### Go/Buffalo
+
+If a `.buffalo.dev.yml` file is found then a Go/Buffalo developent server
+backend is started.
+
+### Go/Hugo
+
+If a `config.toml` file is found in the root of the project then a Go/Hugo
+development backend is started.
+
 ### Static HTML
 
 To enable a static HTML site, simply symlink to a the public directory
@@ -57,12 +72,10 @@ root is requested `index.html` files will be served if they exist.
 
 ## TODO
 
-* Ruby/Rails
 * Ruby/Hanami
 * Ruby/Rack
 * Ruby/Rakefile
 * Docker (Compose)
 * Procfile
-* Go/Buffalo
 * Node/package.json
 * PHP
