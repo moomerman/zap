@@ -37,6 +37,7 @@ var renderer = render.New(render.Options{
 	Layout:     "layout",
 	Asset:      Asset,
 	AssetNames: AssetNames,
+	Extensions: []string{".html"},
 })
 
 // ServeTLS starts the HTTPS server
