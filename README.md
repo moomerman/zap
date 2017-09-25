@@ -29,3 +29,11 @@ Zap knows how to manage a number of `Backends` including:
 ## Credits
 
 Inspired by pow (http://pow.cx/) and puma-dev (https://github.com/puma/puma-dev)
+
+## Development
+
+To recompile the HTML templates
+
+```
+go-bindata -pkg zap -o zap/templates.go templates/
+```

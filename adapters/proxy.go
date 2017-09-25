@@ -14,6 +14,7 @@ type ProxyAdapter struct {
 	Host  string
 	Proxy string
 	proxy *multiproxy.MultiProxy
+	state Status
 }
 
 // CreateProxyAdapter creates a new proxy
@@ -26,9 +27,16 @@ func CreateProxyAdapter(host, proxy string) (Adapter, error) {
 
 // Start starts the proxy
 func (d *ProxyAdapter) Start() error {
+	d.state = StatusStarting
 	fmt.Println("[proxy]", d.Host, "starting proxy to", d.Proxy)
 	d.proxy = multiproxy.NewProxy(d.Proxy, d.Host)
+	d.state = StatusRunning
 	return nil
+}
+
+// Status returns the status of the proxy
+func (d *ProxyAdapter) Status() Status {
+	return d.state
 }
 
 // ServeHTTP implements the http.Handler interface

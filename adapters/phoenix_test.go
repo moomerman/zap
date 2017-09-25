@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestElixirPhoenix(t *testing.T) {
@@ -18,6 +19,7 @@ func TestElixirPhoenix(t *testing.T) {
 	if err = adapter.Start(); err != nil {
 		panic(err)
 	}
+	time.Sleep(5 * time.Second)
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {

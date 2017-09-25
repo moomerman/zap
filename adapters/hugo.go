@@ -10,6 +10,5 @@ func CreateHugoAdapter(host, dir string) (Adapter, error) {
 		Host:         host,
 		Dir:          dir,
 		ShellCommand: hugoShellCommand,
-		readyChan:    make(chan struct{}),
 	}, nil
 }

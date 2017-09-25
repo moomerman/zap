@@ -2,12 +2,12 @@ package zap
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/moomerman/zap/cert"
 	"github.com/puma/puma-dev/dev/launch"
+	"github.com/unrolled/render"
 	"golang.org/x/net/http2"
 )
 
@@ -32,6 +32,12 @@ func NewServer() *Server {
 		https: https,
 	}
 }
+
+var renderer = render.New(render.Options{
+	Layout:     "layout",
+	Asset:      Asset,
+	AssetNames: AssetNames,
+})
 
 // ServeTLS starts the HTTPS server
 func (s *Server) ServeTLS(bind string) {
@@ -82,11 +88,16 @@ func appHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app, err := findAppForHost(r.Host)
 		if err != nil {
-			http.Error(w, "502 App Not Found", http.StatusBadGateway)
+			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
 			return
 		}
 
-		app.ServeHTTP(w, r)
+		switch app.Status() {
+		case "running":
+			app.ServeHTTP(w, r)
+		default:
+			renderer.HTML(w, http.StatusAccepted, "app", app)
+		}
 	}
 }
 
@@ -106,13 +117,14 @@ func statusHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app, err := findAppForHost(r.Host)
 		if err != nil {
-			http.Error(w, "502 App Not Found", http.StatusBadGateway)
+			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
 			return
 		}
 
-		content, _ := json.MarshalIndent(app, "", "  ")
+		renderer.HTML(w, http.StatusOK, "app", app)
+		// content, _ := json.MarshalIndent(app, "", "  ")
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(content)
+		// w.Header().Set("Content-Type", "application/json")
+		// w.Write(content)
 	}
 }

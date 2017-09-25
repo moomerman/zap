@@ -10,6 +10,5 @@ func CreateRailsAdapter(host, dir string) (Adapter, error) {
 		Host:         host,
 		Dir:          dir,
 		ShellCommand: railsShellCommand,
-		readyChan:    make(chan struct{}),
 	}, nil
 }

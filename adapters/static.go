@@ -12,7 +12,8 @@ import (
 
 // StaticAdapter holds the state for the application
 type StaticAdapter struct {
-	Dir string
+	Dir    string
+	status Status
 }
 
 // CreateStaticAdapter creates a new static HTML application
@@ -20,6 +21,11 @@ func CreateStaticAdapter(dir string) (Adapter, error) {
 	return &StaticAdapter{
 		Dir: dir,
 	}, nil
+}
+
+// Status returns the status of the adapter
+func (d *StaticAdapter) Status() Status {
+	return d.status
 }
 
 // ServeHTTP implements the http.Handler interface
@@ -57,10 +63,16 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Start doesn't do anything
-func (d *StaticAdapter) Start() error { return nil }
+func (d *StaticAdapter) Start() error {
+	d.status = StatusRunning
+	return nil
+}
 
 // Stop doesn't do anything
-func (d *StaticAdapter) Stop() error { return nil }
+func (d *StaticAdapter) Stop() error {
+	d.status = StatusStopped
+	return nil
+}
 
 // Command doesn't do anything
 func (d *StaticAdapter) Command() *exec.Cmd { return nil }

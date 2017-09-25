@@ -20,6 +20,5 @@ func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 		ShellCommand:    phoenixShellCommand,
 		RestartPatterns: []*regexp.Regexp{mixFileChanged},
 		EnvPortName:     "PHX_PORT",
-		readyChan:       make(chan struct{}),
 	}, nil
 }

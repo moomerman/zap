@@ -1,6 +1,7 @@
 package zap
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,8 +24,7 @@ var lock sync.Mutex
 type App struct {
 	Config   *HostConfig
 	LastUsed time.Time
-
-	adapter adapters.Adapter
+	adapter  adapters.Adapter
 }
 
 // NewApp creates a new App for the given host
@@ -70,6 +70,11 @@ func (a *App) Stop(reason string, e error) error {
 	return a.adapter.Stop()
 }
 
+// Status returns the status of the application
+func (a *App) Status() string {
+	return string(a.adapter.Status())
+}
+
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.LastUsed = time.Now()
 	a.adapter.ServeHTTP(w, r)
@@ -78,6 +83,12 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // WriteLog writes out the application log to the given writer
 func (a *App) WriteLog(w io.Writer) {
 	a.adapter.WriteLog(w)
+}
+
+func (a *App) LogTail() string {
+	buf := bytes.NewBufferString("")
+	a.WriteLog(buf)
+	return buf.String()
 }
 
 func getAdapter(config *HostConfig) (adapters.Adapter, error) {
@@ -153,6 +164,14 @@ func findAppForHost(host string) (*App, error) {
 	lock.Unlock()
 
 	if app != nil {
+		if app.Status() == "stopped" {
+			err = app.Start()
+			if err != nil {
+				fmt.Println("[app]", host, config.Key, "error starting app", err)
+				app.Stop("app failed to start", err)
+				return nil, errors.Context(err, "app failed to start")
+			}
+		}
 		return app, nil
 	}
 

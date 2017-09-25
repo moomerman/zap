@@ -11,6 +11,5 @@ func CreateBuffaloAdapter(host, dir string) (Adapter, error) {
 		Dir:          dir,
 		ShellCommand: buffaloShellCommand,
 		EnvPortName:  "PORT",
-		readyChan:    make(chan struct{}),
 	}, nil
 }
