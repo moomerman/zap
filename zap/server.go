@@ -69,11 +69,19 @@ func (s *Server) ServeTLS(bind string) {
 
 // Serve starts the HTTP server
 func (s *Server) Serve(bind string) {
-	listener, err := net.Listen("tcp", bind)
-	if err != nil {
-		log.Fatal("unable to create listener", err)
+	if bind == "Socket" {
+		listeners, err := launch.SocketListeners(bind)
+		if err != nil {
+			log.Fatal("unable to get launchd socket listener", err)
+		}
+		s.http.Serve(listeners[0])
+	} else {
+		listener, err := net.Listen("tcp", bind)
+		if err != nil {
+			log.Fatal("unable to create listener", err)
+		}
+		s.http.Serve(listener)
 	}
-	s.http.Serve(listener)
 }
 
 func startHTTPS(handler http.Handler) *http.Server {
