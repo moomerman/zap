@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/vektra/errors"
 )
 
 func TestRubyRails(t *testing.T) {
@@ -39,6 +41,6 @@ func TestRubyRails(t *testing.T) {
 		t.Errorf("%s: ~ /%s/ = %v, want %v", rr.Body, re, got, match)
 	}
 
-	adapter.Stop()
+	adapter.Stop(errors.New("test finished"))
 	time.Sleep(1 * time.Second)
 }

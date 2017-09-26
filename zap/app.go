@@ -71,11 +71,11 @@ func (a *app) Stop(reason string, e error) error {
 	lock.Lock()
 	delete(apps, a.Config.Key)
 	lock.Unlock()
-	return a.Adapter.Stop()
+	return a.Adapter.Stop(errors.Context(e, reason))
 }
 
 func (a *app) Restart() error {
-	return a.Adapter.Restart(errors.New("user requested restart"))
+	return a.Adapter.Stop(errors.New("user requested restart"))
 }
 
 // Status returns the status of the application

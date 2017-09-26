@@ -46,7 +46,7 @@ func (a *ProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Stop stops the adapter
-func (a *ProxyAdapter) Stop() error { return nil }
+func (a *ProxyAdapter) Stop(reason error) error { return nil }
 
 // Restart restarts the adapter
 func (a *ProxyAdapter) Restart(reason error) error { return nil }

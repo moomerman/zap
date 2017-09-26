@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/moomerman/zap/multiproxy"
@@ -20,6 +21,8 @@ import (
 
 // AppProxyAdapter holds the state for the application
 type AppProxyAdapter struct {
+	sync.Mutex
+
 	Host            string
 	Dir             string
 	Port            string
@@ -39,46 +42,31 @@ type AppProxyAdapter struct {
 
 // Start starts the application
 func (a *AppProxyAdapter) Start() error {
-	a.State = StatusStarting
-	log.Println("[app]", a.Host, "starting")
+	a.Lock()
+	defer a.Unlock()
+	if a.State == StatusStopping || a.State == StatusRunning {
+		return nil
+	}
+
+	log.Println("[app]", a.Host, "START")
 	return a.start()
 }
 
 // Stop stops the application
-func (a *AppProxyAdapter) Stop() error {
-	a.State = StatusStopping
-	log.Println("[app]", a.Host, "stopping")
-	return a.stop()
-}
-
-// Restart restarts the adapter
-func (a *AppProxyAdapter) Restart(reason error) error {
-	a.State = StatusRestarting
-	log.Println("[app]", a.Host, "restarting", reason)
-
-	if err := a.stop(); a != nil {
-		log.Printf("[app] %s error trying to stop on restart: %s", a.Host, err)
-		a.State = StatusError
-		return err
+func (a *AppProxyAdapter) Stop(reason error) error {
+	a.Lock()
+	defer a.Unlock()
+	if a.State == StatusStopping || a.State == StatusStopped {
+		return nil
 	}
 
-	// if err := a.start(); a != nil {
-	// 	log.Printf("[app] error trying to start on restart %s: %s", a.Host, err)
-	// 	a.State = StatusError
-	// 	return err
-	// }
-
-	return nil
+	log.Println("[app]", a.Host, "STOP", reason)
+	return a.stop()
 }
 
 // Status returns the status of the adapter
 func (a *AppProxyAdapter) Status() Status {
 	return a.State
-}
-
-// Command returns the command used to start the application
-func (a *AppProxyAdapter) Command() *exec.Cmd {
-	return a.cmd
 }
 
 // WriteLog writes the log to the given writer
@@ -93,19 +81,22 @@ func (a *AppProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppProxyAdapter) start() error {
+	a.State = StatusStarting
 	a.cancelChan = make(chan struct{})
 
 	port, err := findAvailablePort()
 	if err != nil {
-		a.State = StatusError
-		return errors.Context(err, "couldn't find available port")
+		e := errors.Context(err, "couldn't find available port")
+		a.Stop(e)
+		return e
 	}
 
 	a.Port = port
 
 	if err := a.startApplication(a.ShellCommand); err != nil {
-		a.State = StatusError
-		return errors.Context(err, "could not start application")
+		e := errors.Context(err, "could not start application")
+		a.Stop(e)
+		return e
 	}
 
 	a.proxy = multiproxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
@@ -117,10 +108,12 @@ func (a *AppProxyAdapter) start() error {
 }
 
 func (a *AppProxyAdapter) stop() error {
-	// TODO: use a lock so only one goroutine can try and stop at one time?
+	a.State = StatusStopping
+	close(a.cancelChan)
+
 	err := a.cmd.Process.Kill()
 	if err != nil {
-		fmt.Printf("[app] error trying to stop %s: %s", a.Host, err)
+		log.Println("[app]", a.Host, "error trying to stop", err)
 		return err
 	}
 
@@ -177,7 +170,7 @@ func (a *AppProxyAdapter) tail() {
 
 				for _, pattern := range a.RestartPatterns {
 					if pattern.MatchString(line) {
-						a.Restart(errors.New("Restart pattern matched"))
+						a.Stop(errors.New("Restart pattern matched"))
 						return
 					}
 				}
@@ -194,10 +187,7 @@ func (a *AppProxyAdapter) tail() {
 
 	select {
 	case err = <-c:
-		a.State = StatusError
-		close(a.cancelChan)
-		log.Println("[app]", a.Host, "error tailing log", err)
-		err = errors.Context(err, "stdout/stderr closed")
+		a.Stop(errors.Context(err, "stdout/stderr closed"))
 	}
 
 }
@@ -209,23 +199,21 @@ func (a *AppProxyAdapter) checkPort() {
 	for {
 		select {
 		case <-a.cancelChan:
-			log.Println("[app]", a.Host, "checkPort cancelChan closed")
 			return
 		case <-ticker.C:
 			c, err := net.Dial("tcp", ":"+a.Port)
 			if err == nil {
-				log.Println("[app]", a.Host, "checkPort success")
+				defer c.Close()
+				log.Println("[app]", a.Host, "port available")
 				buf := bytes.NewBufferString("")
 				a.WriteLog(buf)
 				a.BootLog = buf.String()
 				a.State = StatusRunning
-				c.Close()
 				return
 			}
 		case <-time.After(time.Second * 30):
-			log.Println("[app]", a.Host, "checkPort timeout")
-			a.State = StatusError // TODO: log this error as a timeout
-			// return errors.New("time out waiting for app to start")
+			log.Println("[app]", a.Host, "port timeout")
+			a.Stop(errors.New("port timeout"))
 			return
 		}
 	}

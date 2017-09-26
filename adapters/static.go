@@ -69,7 +69,7 @@ func (d *StaticAdapter) Start() error {
 }
 
 // Stop doesn't do anything
-func (d *StaticAdapter) Stop() error {
+func (d *StaticAdapter) Stop(reason error) error {
 	d.State = StatusStopped
 	return nil
 }

@@ -10,8 +10,7 @@ import (
 // Adapter defines the interface for an Adapter implementation
 type Adapter interface {
 	Start() error
-	Stop() error
-	Restart(error) error
+	Stop(reason error) error
 	Status() Status
 	WriteLog(io.Writer)
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
