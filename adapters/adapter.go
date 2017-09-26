@@ -11,6 +11,7 @@ import (
 type Adapter interface {
 	Start() error
 	Stop() error
+	Restart(error) error
 	Status() Status
 	WriteLog(io.Writer)
 	ServeHTTP(w http.ResponseWriter, r *http.Request)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -59,6 +60,7 @@ func (a *app) Start() error {
 		return err
 	}
 
+	a.LastUsed = time.Now()
 	go a.idleMonitor()
 	return nil
 }
@@ -70,6 +72,10 @@ func (a *app) Stop(reason string, e error) error {
 	delete(apps, a.Config.Key)
 	lock.Unlock()
 	return a.Adapter.Stop()
+}
+
+func (a *app) Restart() error {
+	return a.Adapter.Restart(errors.New("user requested restart"))
 }
 
 // Status returns the status of the application
@@ -97,34 +103,34 @@ func (a *app) LogTail() string {
 func getAdapter(config *HostConfig) (adapters.Adapter, error) {
 	_, err := os.Stat(path.Join(config.Dir, "mix.exs"))
 	if err == nil {
-		fmt.Println("[app]", config.Host, "using the phoenix adapter (found mix.exs)")
+		log.Println("[app]", config.Host, "using the phoenix adapter (found mix.exs)")
 		return adapters.CreatePhoenixAdapter(config.Host, config.Dir)
 	}
 
 	_, err = os.Stat(path.Join(config.Dir, "Gemfile"))
 	if err == nil {
-		fmt.Println("[app]", config.Host, "using the rails adapter (found Gemfile)")
+		log.Println("[app]", config.Host, "using the rails adapter (found Gemfile)")
 		return adapters.CreateRailsAdapter(config.Host, config.Dir)
 	}
 
 	_, err = os.Stat(path.Join(config.Dir, ".buffalo.dev.yml"))
 	if err == nil {
-		fmt.Println("[app]", config.Host, "using the buffalo adapter (found .buffalo.dev.yml)")
+		log.Println("[app]", config.Host, "using the buffalo adapter (found .buffalo.dev.yml)")
 		return adapters.CreateBuffaloAdapter(config.Host, config.Dir)
 	}
 
 	_, err = os.Stat(path.Join(config.Dir, "config.toml"))
 	if err == nil {
-		fmt.Println("[app]", config.Host, "using the hugo adapter (found config.toml)")
+		log.Println("[app]", config.Host, "using the hugo adapter (found config.toml)")
 		return adapters.CreateHugoAdapter(config.Host, config.Dir)
 	}
 
-	fmt.Println("[app]", config.Host, "using the static adapter")
+	log.Println("[app]", config.Host, "using the static adapter")
 	return adapters.CreateStaticAdapter(config.Dir)
 }
 
-func (a *app) idleMonitor() error {
-	fmt.Println("[app]", a.Config.Host, "starting idle monitor")
+func (a *app) idleMonitor() {
+	log.Println("[app]", a.Config.Host, "starting idle monitor")
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -132,12 +138,12 @@ func (a *app) idleMonitor() error {
 		select {
 		case <-ticker.C:
 			if a.idle() {
+				log.Println("[app]", a.Config.Host, "app is idle")
 				a.Stop("app is idle", nil)
-				return nil
+				return
 			}
 		}
 	}
-
 }
 
 func (a *app) idle() bool {
@@ -170,7 +176,7 @@ func findAppForHost(host string) (*app, error) {
 		if app.Status() == "stopped" {
 			err = app.Start()
 			if err != nil {
-				fmt.Println("[app]", host, config.Key, "error starting app", err)
+				log.Println("[app]", host, config.Key, "error starting app", err)
 				app.Stop("app failed to start", err)
 				return nil, errors.Context(err, "app failed to start")
 			}
@@ -178,22 +184,22 @@ func findAppForHost(host string) (*app, error) {
 		return app, nil
 	}
 
-	fmt.Println("[app]", host, config.Key, "creating app")
+	log.Println("[app]", host, config.Key, "creating app")
 
 	app, err = newApp(config)
 	if err != nil {
-		fmt.Println("[app]", host, config.Key, "error creating app", err)
+		log.Println("[app]", host, config.Key, "error creating app", err)
 		return nil, errors.Context(err, "app failed to create")
 	}
 
 	err = app.Start()
 	if err != nil {
-		fmt.Println("[app]", host, config.Key, "error starting app", err)
+		log.Println("[app]", host, config.Key, "error starting app", err)
 		app.Stop("app failed to start", err)
 		return nil, errors.Context(err, "app failed to start")
 	}
 
-	fmt.Println("[app]", host, config.Key, "created app")
+	log.Println("[app]", host, config.Key, "created app")
 
 	lock.Lock()
 	apps[config.Key] = app

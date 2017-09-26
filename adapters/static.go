@@ -1,8 +1,8 @@
 package adapters
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -35,7 +35,7 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	info, err := os.Stat(filename)
 
 	if err != nil {
-		fmt.Println("[static]", fullURL(r), "->", 404)
+		log.Println("[static]", fullURL(r), "->", 404)
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
@@ -44,7 +44,7 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filename = path.Join(filename, "index.html")
 		info, err = os.Stat(filename)
 		if err != nil || info.IsDir() {
-			fmt.Println("[static]", fullURL(r), "->", 404)
+			log.Println("[static]", fullURL(r), "->", 404)
 			http.Error(w, "404 Not Found", http.StatusNotFound)
 			return
 		}
@@ -52,13 +52,13 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("[static]", fullURL(r), "->", 500)
+		log.Println("[static]", fullURL(r), "->", 500)
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer file.Close()
 
-	fmt.Println("[static]", fullURL(r), "->", filename)
+	log.Println("[static]", fullURL(r), "->", filename)
 	http.ServeContent(w, r, filename, time.Now(), file)
 }
 
@@ -73,6 +73,9 @@ func (d *StaticAdapter) Stop() error {
 	d.State = StatusStopped
 	return nil
 }
+
+// Restart restarts the adapter
+func (d *StaticAdapter) Restart(error) error { return nil }
 
 // Command doesn't do anything
 func (d *StaticAdapter) Command() *exec.Cmd { return nil }

@@ -1,8 +1,8 @@
 package adapters
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os/exec"
 
@@ -26,30 +26,33 @@ func CreateProxyAdapter(host, proxy string) (Adapter, error) {
 }
 
 // Start starts the proxy
-func (d *ProxyAdapter) Start() error {
-	d.State = StatusStarting
-	fmt.Println("[proxy]", d.Host, "starting proxy to", d.Proxy)
-	d.proxy = multiproxy.NewProxy(d.Proxy, d.Host)
-	d.State = StatusRunning
+func (a *ProxyAdapter) Start() error {
+	a.State = StatusStarting
+	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
+	a.proxy = multiproxy.NewProxy(a.Proxy, a.Host)
+	a.State = StatusRunning
 	return nil
 }
 
 // Status returns the status of the proxy
-func (d *ProxyAdapter) Status() Status {
-	return d.State
+func (a *ProxyAdapter) Status() Status {
+	return a.State
 }
 
 // ServeHTTP implements the http.Handler interface
-func (d *ProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("[proxy]", fullURL(r), "->", d.proxy.URL)
-	d.proxy.Proxy(w, r)
+func (a *ProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("[proxy]", fullURL(r), "->", a.proxy.URL)
+	a.proxy.Proxy(w, r)
 }
 
-// Stop doesn't do anything
-func (d *ProxyAdapter) Stop() error { return nil }
+// Stop stops the adapter
+func (a *ProxyAdapter) Stop() error { return nil }
+
+// Restart restarts the adapter
+func (a *ProxyAdapter) Restart(reason error) error { return nil }
 
 // Command doesn't do anything
-func (d *ProxyAdapter) Command() *exec.Cmd { return nil }
+func (a *ProxyAdapter) Command() *exec.Cmd { return nil }
 
 // WriteLog doesn't do anything
-func (d *ProxyAdapter) WriteLog(w io.Writer) {}
+func (a *ProxyAdapter) WriteLog(w io.Writer) {}

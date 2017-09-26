@@ -27,6 +27,7 @@ func NewServer() *Server {
 	httpsMux.HandleFunc("/zap/log", logHandler())
 	httpsMux.HandleFunc("/zap/state", stateHandler())
 	httpsMux.HandleFunc("/zap/apps", appsHandler())
+	httpsMux.HandleFunc("/zap/restart", restartHandler())
 	httpsMux.HandleFunc("/zap", statusHandler())
 	httpsMux.HandleFunc("/", appHandler())
 
@@ -183,5 +184,20 @@ func appsHandler() func(http.ResponseWriter, *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(content)
+	}
+}
+
+func restartHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
+			return
+		}
+
+		app.Restart()
+
+		http.Redirect(w, r, "/zap", http.StatusTemporaryRedirect)
 	}
 }

@@ -2,14 +2,16 @@
 
 <p>Status: <span id="status">{{ .Status }}</span></p>
 
-<pre id="log">...</pre>
+<pre id="log">{{ if eq .Status "running" }}{{ .Adapter.BootLog }}{{ else }}{{ .LogTail }}{{ end }}</pre>
 
 <script type="text/javascript">
   /** @type{string} **/
   var status = "{{ .Status }}";
 
   function fetchLog() {
-    setTimeout(function () { get("/zap/log", updateLog); }, 500);
+    if (status != "running") {
+      setTimeout(function () { get("/zap/log", updateLog); }, 500);
+    }
   }
 
   function updateLog(data) {
@@ -18,15 +20,18 @@
   }
 
   function fetchState() {
-    if (status != "running") {
+    // if (status != "running") {
       setTimeout(function () { get("/zap/state", updateState); }, 2000);
-    }
+    // }
   }
 
   function updateState(data) {
     data = JSON.parse(data);
     status = data.status;
-    document.getElementById("status").innerHTML = status;
+    document.getElementById("status").innerHTML = data.status;
+    if (status == "running") {
+      document.getElementById("log").innerHTML = data.app.Adapter.BootLog;
+    }
     fetchState();
   }
 
