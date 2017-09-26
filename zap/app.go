@@ -17,19 +17,19 @@ import (
 
 const appsPath = "~/.zap"
 
-var apps map[string]*App
+var apps map[string]*app
 var lock sync.Mutex
 
-// App holds the state of a running Application
-type App struct {
+// app holds the state of a running Application
+type app struct {
 	Config   *HostConfig
 	LastUsed time.Time
-	adapter  adapters.Adapter
-	started  time.Time
+	Adapter  adapters.Adapter
+	Started  time.Time
 }
 
-// NewApp creates a new App for the given host
-func NewApp(config *HostConfig) (*App, error) {
+// newApp creates a new App for the given host
+func newApp(config *HostConfig) (*app, error) {
 	var adapter adapters.Adapter
 	var err error
 
@@ -45,16 +45,16 @@ func NewApp(config *HostConfig) (*App, error) {
 		}
 	}
 
-	return &App{
+	return &app{
 		Config:  config,
-		adapter: adapter,
-		started: time.Now(),
+		Adapter: adapter,
+		Started: time.Now(),
 	}, nil
 }
 
 // Start starts an application and monitors activity
-func (a *App) Start() error {
-	err := a.adapter.Start()
+func (a *app) Start() error {
+	err := a.Adapter.Start()
 	if err != nil {
 		return err
 	}
@@ -64,31 +64,31 @@ func (a *App) Start() error {
 }
 
 // Stop stops an application
-func (a *App) Stop(reason string, e error) error {
+func (a *app) Stop(reason string, e error) error {
 	fmt.Printf("! Stopping '%s' %s %s\n", a.Config.Host, reason, e)
 	lock.Lock()
 	delete(apps, a.Config.Key)
 	lock.Unlock()
-	return a.adapter.Stop()
+	return a.Adapter.Stop()
 }
 
 // Status returns the status of the application
-func (a *App) Status() string {
-	return string(a.adapter.Status())
+func (a *app) Status() string {
+	return string(a.Adapter.Status())
 }
 
-func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.LastUsed = time.Now()
-	a.adapter.ServeHTTP(w, r)
+	a.Adapter.ServeHTTP(w, r)
 }
 
 // WriteLog writes out the application log to the given writer
-func (a *App) WriteLog(w io.Writer) {
-	a.adapter.WriteLog(w)
+func (a *app) WriteLog(w io.Writer) {
+	a.Adapter.WriteLog(w)
 }
 
 // LogTail returns the last X lines of the log file
-func (a *App) LogTail() string {
+func (a *app) LogTail() string {
 	buf := bytes.NewBufferString("")
 	a.WriteLog(buf)
 	return buf.String()
@@ -123,7 +123,7 @@ func getAdapter(config *HostConfig) (adapters.Adapter, error) {
 	return adapters.CreateStaticAdapter(config.Dir)
 }
 
-func (a *App) idleMonitor() error {
+func (a *app) idleMonitor() error {
 	fmt.Println("[app]", a.Config.Host, "starting idle monitor")
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
@@ -140,7 +140,7 @@ func (a *App) idleMonitor() error {
 
 }
 
-func (a *App) idle() bool {
+func (a *app) idle() bool {
 	diff := time.Since(a.LastUsed)
 	if diff > 60*60*time.Second {
 		return true
@@ -149,7 +149,7 @@ func (a *App) idle() bool {
 	return false
 }
 
-func findAppForHost(host string) (*App, error) {
+func findAppForHost(host string) (*app, error) {
 	hostParts := strings.Split(host, ":")
 	host = hostParts[0]
 
@@ -160,7 +160,7 @@ func findAppForHost(host string) (*App, error) {
 
 	lock.Lock()
 	if apps == nil {
-		apps = make(map[string]*App)
+		apps = make(map[string]*app)
 	}
 
 	app := apps[config.Key]
@@ -180,7 +180,7 @@ func findAppForHost(host string) (*App, error) {
 
 	fmt.Println("[app]", host, config.Key, "creating app")
 
-	app, err = NewApp(config)
+	app, err = newApp(config)
 	if err != nil {
 		fmt.Println("[app]", host, config.Key, "error creating app", err)
 		return nil, errors.Context(err, "app failed to create")

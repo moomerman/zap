@@ -24,10 +24,10 @@ type AppProxyAdapter struct {
 	ShellCommand    string
 	EnvPortName     string
 	RestartPatterns []*regexp.Regexp
+	Cmd             *exec.Cmd
+	State           Status
 
-	cmd        *exec.Cmd
 	proxy      *multiproxy.MultiProxy
-	state      Status
 	stdout     io.Reader
 	log        linebuffer.LineBuffer
 	cancelChan chan struct{}
@@ -36,18 +36,18 @@ type AppProxyAdapter struct {
 // Start starts the application
 func (a *AppProxyAdapter) Start() error {
 	a.cancelChan = make(chan struct{})
-	a.state = StatusStarting
+	a.State = StatusStarting
 
 	port, err := findAvailablePort()
 	if err != nil {
-		a.state = StatusError
+		a.State = StatusError
 		return errors.Context(err, "couldn't find available port")
 	}
 
 	a.Port = port
 
 	if err := a.startApplication(a.ShellCommand); err != nil {
-		a.state = StatusError
+		a.State = StatusError
 		return errors.Context(err, "could not start application")
 	}
 
@@ -61,34 +61,34 @@ func (a *AppProxyAdapter) Start() error {
 
 // Stop stops the application
 func (a *AppProxyAdapter) Stop() error {
-	a.state = StatusStopping
+	a.State = StatusStopping
 	// TODO: use a lock so only one goroutine can try and stop at one time?
-	err := a.cmd.Process.Kill()
+	err := a.Cmd.Process.Kill()
 	if err != nil {
 		fmt.Printf("  [app] error trying to stop %s: %s", a.Host, err)
 		return err
 	}
 
-	a.cmd.Wait()
+	a.Cmd.Wait()
 
 	fmt.Println("  [app] shutdown and cleaned up", a.Host, err)
-	a.state = StatusStopped
+	a.State = StatusStopped
 	return nil
 }
 
 // Restart restarts the adapter
 func (a *AppProxyAdapter) Restart(reason error) error {
-	a.state = StatusRestarting
+	a.State = StatusRestarting
 	// TODO: lock
 	// TODO: stop/cleanup
-	err := a.cmd.Process.Kill()
+	err := a.Cmd.Process.Kill()
 	if err != nil {
 		fmt.Printf("  [app] error trying to stop on restart %s: %s", a.Host, err)
-		a.state = StatusError
+		a.State = StatusError
 		return err
 	}
 
-	a.cmd.Wait()
+	a.Cmd.Wait()
 
 	a.Start()
 
@@ -97,12 +97,12 @@ func (a *AppProxyAdapter) Restart(reason error) error {
 
 // Status returns the status of the adapter
 func (a *AppProxyAdapter) Status() Status {
-	return a.state
+	return a.State
 }
 
 // Command returns the command used to start the application
 func (a *AppProxyAdapter) Command() *exec.Cmd {
-	return a.cmd
+	return a.Cmd
 }
 
 // WriteLog writes the log to the given writer
@@ -141,7 +141,7 @@ func (a *AppProxyAdapter) startApplication(command string) error {
 		return errors.Context(err, "starting app")
 	}
 
-	a.cmd = cmd
+	a.Cmd = cmd
 	return nil
 }
 
@@ -155,7 +155,7 @@ func (a *AppProxyAdapter) tail() error {
 			line, err := r.ReadString('\n')
 			if line != "" {
 				a.log.Append(line)
-				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, a.cmd.Process.Pid, line)
+				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, a.Cmd.Process.Pid, line)
 
 				for _, pattern := range a.RestartPatterns {
 					if pattern.MatchString(line) {
@@ -176,7 +176,7 @@ func (a *AppProxyAdapter) tail() error {
 
 	select {
 	case err = <-c:
-		a.state = StatusError
+		a.State = StatusError
 		close(a.cancelChan)
 		fmt.Println("  [app] error tailing log", a.Host, err)
 		err = errors.Context(err, "stdout/stderr closed")
@@ -198,12 +198,12 @@ func (a *AppProxyAdapter) checkPort() {
 			c, err := net.Dial("tcp", ":"+a.Port)
 			if err == nil {
 				c.Close()
-				a.state = StatusRunning
+				a.State = StatusRunning
 				return
 			}
 		case <-time.After(time.Second * 30):
 			fmt.Println("  [app] checkPort timeout", a.Host)
-			a.state = StatusError // TODO: log this error as a timeout
+			a.State = StatusError // TODO: log this error as a timeout
 			// return errors.New("time out waiting for app to start")
 			return
 		}

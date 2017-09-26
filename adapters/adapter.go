@@ -5,12 +5,10 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os/exec"
 )
 
 // Adapter defines the interface for an Adapter implementation
 type Adapter interface {
-	Command() *exec.Cmd
 	Start() error
 	Stop() error
 	Status() Status

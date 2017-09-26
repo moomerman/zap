@@ -160,7 +160,7 @@ func stateHandler() func(http.ResponseWriter, *http.Request) {
 
 		content, err := json.MarshalIndent(map[string]interface{}{
 			"app":    app,
-			"uptime": time.Since(app.started).String(),
+			"uptime": time.Since(app.Started).String(),
 			"status": app.Status(),
 		}, "", "  ")
 
