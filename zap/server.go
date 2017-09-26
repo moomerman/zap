@@ -3,7 +3,6 @@ package zap
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -70,7 +69,6 @@ func (s *Server) ServeTLS(bind string) {
 
 // Serve starts the HTTP server
 func (s *Server) Serve(bind string) {
-	fmt.Println("SERVE", bind)
 	listener, err := net.Listen("tcp", bind)
 	if err != nil {
 		log.Fatal("unable to create listener", err)
@@ -141,10 +139,6 @@ func statusHandler() func(http.ResponseWriter, *http.Request) {
 		}
 
 		renderer.HTML(w, http.StatusOK, "app", app)
-		// content, _ := json.MarshalIndent(app, "", "  ")
-
-		// w.Header().Set("Content-Type", "application/json")
-		// w.Write(content)
 	}
 }
 

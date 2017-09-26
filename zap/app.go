@@ -87,6 +87,7 @@ func (a *App) WriteLog(w io.Writer) {
 	a.adapter.WriteLog(w)
 }
 
+// LogTail returns the last X lines of the log file
 func (a *App) LogTail() string {
 	buf := bytes.NewBufferString("")
 	a.WriteLog(buf)
