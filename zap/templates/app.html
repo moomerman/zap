@@ -1,36 +1,48 @@
 <h1>⚡Zap - {{ .Config.Host }}</h1>
 
-<p>Status: {{ .Status }}</p>
+<p>Status: <span id="status">{{ .Status }}</span></p>
 
 <pre id="log">...</pre>
 
 <script type="text/javascript">
+  /** @type{string} **/
   var status = "{{ .Status }}";
 
-  if (status != "running") {
-    setTimeout(function(){window.location.reload(1);}, 2000);
-  }
-
-  function fetch() {
-    setTimeout(function(){get("/zap/log", updateLog);}, 500);
+  function fetchLog() {
+    setTimeout(function () { get("/zap/log", updateLog); }, 500);
   }
 
   function updateLog(data) {
     document.getElementById("log").innerHTML = data;
-    fetch();
+    fetchLog();
   }
 
-  function get(url, callback){
+  function fetchState() {
+    if (status != "running") {
+      setTimeout(function () { get("/zap/state", updateState); }, 2000);
+    }
+  }
+
+  function updateState(data) {
+    data = JSON.parse(data);
+    status = data.status;
+    document.getElementById("status").innerHTML = status;
+    fetchState();
+  }
+
+  function get(url, callback) {
     var xmlhttp;
     xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function(){
-      if (xmlhttp.readyState == 4 && xmlhttp.status == 200){
-          callback(xmlhttp.responseText);
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        callback(xmlhttp.responseText);
       }
     }
     xmlhttp.open("GET", url, true);
     xmlhttp.send();
   }
 
-  fetch();
+  fetchState();
+  fetchLog();
+
 </script>

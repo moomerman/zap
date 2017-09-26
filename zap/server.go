@@ -2,8 +2,12 @@ package zap
 
 import (
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/moomerman/zap/cert"
 	"github.com/puma/puma-dev/dev/launch"
@@ -19,13 +23,19 @@ type Server struct {
 
 // NewServer starts the HTTP and HTTPS proxy servers
 func NewServer() *Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/zap/log", logHandler())
-	mux.HandleFunc("/zap/status", statusHandler())
-	mux.HandleFunc("/", appHandler())
+	httpsMux := http.NewServeMux()
+	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
+	httpsMux.HandleFunc("/zap/log", logHandler())
+	httpsMux.HandleFunc("/zap/state", stateHandler())
+	httpsMux.HandleFunc("/zap/apps", appsHandler())
+	httpsMux.HandleFunc("/zap", statusHandler())
+	httpsMux.HandleFunc("/", appHandler())
 
-	http := startHTTP(mux)
-	https := startHTTPS(mux)
+	httpMux := http.NewServeMux()
+	httpMux.HandleFunc("/", appHandler())
+
+	http := startHTTP(httpMux)
+	https := startHTTPS(httpsMux)
 
 	return &Server{
 		http:  http,
@@ -60,6 +70,12 @@ func (s *Server) ServeTLS(bind string) {
 
 // Serve starts the HTTP server
 func (s *Server) Serve(bind string) {
+	fmt.Println("SERVE", bind)
+	listener, err := net.Listen("tcp", bind)
+	if err != nil {
+		log.Fatal("unable to create listener", err)
+	}
+	s.http.Serve(listener)
 }
 
 func startHTTPS(handler http.Handler) *http.Server {
@@ -82,7 +98,9 @@ func startHTTPS(handler http.Handler) *http.Server {
 }
 
 func startHTTP(handler http.Handler) *http.Server {
-	return nil
+	return &http.Server{
+		Handler: handler,
+	}
 }
 
 func appHandler() func(http.ResponseWriter, *http.Request) {
@@ -127,5 +145,41 @@ func statusHandler() func(http.ResponseWriter, *http.Request) {
 
 		// w.Header().Set("Content-Type", "application/json")
 		// w.Write(content)
+	}
+}
+
+func stateHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
+			return
+		}
+
+		content, err := json.MarshalIndent(map[string]interface{}{
+			"app":    app,
+			"uptime": time.Since(app.started).String(),
+			"status": app.Status(),
+		}, "", "  ")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(content)
+	}
+}
+
+func appsHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		content, err := json.MarshalIndent(map[string]interface{}{
+			"apps": apps,
+		}, "", "  ")
+		if err != nil {
+			log.Println("internal server error", err)
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(content)
 	}
 }

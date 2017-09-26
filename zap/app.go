@@ -25,6 +25,7 @@ type App struct {
 	Config   *HostConfig
 	LastUsed time.Time
 	adapter  adapters.Adapter
+	started  time.Time
 }
 
 // NewApp creates a new App for the given host
@@ -47,6 +48,7 @@ func NewApp(config *HostConfig) (*App, error) {
 	return &App{
 		Config:  config,
 		adapter: adapter,
+		started: time.Now(),
 	}, nil
 }
 
