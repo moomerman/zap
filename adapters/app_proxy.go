@@ -87,7 +87,7 @@ func (a *AppProxyAdapter) start() error {
 	port, err := findAvailablePort()
 	if err != nil {
 		e := errors.Context(err, "couldn't find available port")
-		a.Stop(e)
+		a.error(e)
 		return e
 	}
 
@@ -95,7 +95,7 @@ func (a *AppProxyAdapter) start() error {
 
 	if err := a.startApplication(a.ShellCommand); err != nil {
 		e := errors.Context(err, "could not start application")
-		a.Stop(e)
+		a.error(e)
 		return e
 	}
 
@@ -119,10 +119,27 @@ func (a *AppProxyAdapter) stop() error {
 
 	a.cmd.Wait()
 
-	log.Println("[app]", a.Host, "shutdown and cleaned up", err)
+	log.Println("[app]", a.Host, "shutdown and cleaned up")
 	a.State = StatusStopped
 	a.Pid = 0
 
+	return nil
+}
+
+func (a *AppProxyAdapter) error(err error) error {
+	a.Lock()
+	defer a.Unlock()
+	if a.State == StatusStopping || a.State == StatusStopped {
+		return nil
+	}
+
+	log.Println("[app]", a.Host, "ERROR", err)
+
+	if err := a.stop(); err != nil {
+		return err
+	}
+
+	a.State = StatusError
 	return nil
 }
 
@@ -213,7 +230,7 @@ func (a *AppProxyAdapter) checkPort() {
 			}
 		case <-time.After(time.Second * 30):
 			log.Println("[app]", a.Host, "port timeout")
-			a.Stop(errors.New("port timeout"))
+			a.error(errors.New("port timeout"))
 			return
 		}
 	}

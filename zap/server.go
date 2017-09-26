@@ -24,9 +24,10 @@ type Server struct {
 func NewServer() *Server {
 	httpsMux := http.NewServeMux()
 	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
+	httpsMux.HandleFunc("/zap/api/log", logAPIHandler())
+	httpsMux.HandleFunc("/zap/api/state", stateAPIHandler())
+	httpsMux.HandleFunc("/zap/api/apps", appsAPIHandler())
 	httpsMux.HandleFunc("/zap/log", logHandler())
-	httpsMux.HandleFunc("/zap/state", stateHandler())
-	httpsMux.HandleFunc("/zap/apps", appsHandler())
 	httpsMux.HandleFunc("/zap/restart", restartHandler())
 	httpsMux.HandleFunc("/zap", statusHandler())
 	httpsMux.HandleFunc("/", appHandler())
@@ -127,18 +128,6 @@ func appHandler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func logHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			http.Error(w, "502 App Not Found", http.StatusBadGateway)
-			return
-		}
-
-		app.WriteLog(w)
-	}
-}
-
 func statusHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app, err := findAppForHost(r.Host)
@@ -151,7 +140,49 @@ func statusHandler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func stateHandler() func(http.ResponseWriter, *http.Request) {
+func logHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
+			return
+		}
+
+		renderer.HTML(w, http.StatusOK, "log", app)
+	}
+}
+
+func restartHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
+			return
+		}
+
+		if err := app.Restart(); err != nil {
+			log.Println("[app]", app.Config.Host, "internal server error", err)
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		}
+
+		http.Redirect(w, r, "/zap", http.StatusTemporaryRedirect)
+	}
+}
+
+func logAPIHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app, err := findAppForHost(r.Host)
+		if err != nil {
+			http.Error(w, "502 App Not Found", http.StatusBadGateway)
+			return
+		}
+
+		app.WriteLog(w)
+	}
+}
+
+func stateAPIHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app, err := findAppForHost(r.Host)
 		if err != nil {
@@ -170,34 +201,19 @@ func stateHandler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func appsHandler() func(http.ResponseWriter, *http.Request) {
+func appsAPIHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		content, err := json.MarshalIndent(map[string]interface{}{
 			"apps": apps,
 		}, "", "  ")
 		if err != nil {
-			log.Println("internal server error", err)
+			log.Println("[app] internal server error", err)
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(content)
-	}
-}
-
-func restartHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
-			return
-		}
-
-		app.Restart()
-
-		http.Redirect(w, r, "/zap", http.StatusTemporaryRedirect)
 	}
 }

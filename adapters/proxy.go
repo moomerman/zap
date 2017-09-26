@@ -11,10 +11,11 @@ import (
 
 // ProxyAdapter holds the state for the application
 type ProxyAdapter struct {
-	Host  string
-	Proxy string
-	proxy *multiproxy.MultiProxy
-	State Status
+	Host    string
+	Proxy   string
+	proxy   *multiproxy.MultiProxy
+	State   Status
+	BootLog string
 }
 
 // CreateProxyAdapter creates a new proxy
@@ -47,9 +48,6 @@ func (a *ProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Stop stops the adapter
 func (a *ProxyAdapter) Stop(reason error) error { return nil }
-
-// Restart restarts the adapter
-func (a *ProxyAdapter) Restart(reason error) error { return nil }
 
 // Command doesn't do anything
 func (a *ProxyAdapter) Command() *exec.Cmd { return nil }

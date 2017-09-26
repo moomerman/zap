@@ -31,26 +31,36 @@ type app struct {
 
 // newApp creates a new App for the given host
 func newApp(config *HostConfig) (*app, error) {
+	app := &app{
+		Config:  config,
+		Started: time.Now(),
+	}
+
+	if err := app.newAdapter(); err != nil {
+		return nil, err
+	}
+
+	return app, nil
+}
+
+func (a *app) newAdapter() error {
 	var adapter adapters.Adapter
 	var err error
 
-	if config.Dir != "" {
-		adapter, err = getAdapter(config)
+	if a.Config.Dir != "" {
+		adapter, err = getAdapter(a.Config)
 		if err != nil {
-			return nil, errors.Context(err, "could not determine adapter")
+			return errors.Context(err, "could not determine adapter")
 		}
 	} else {
-		adapter, err = adapters.CreateProxyAdapter(config.Host, config.Content)
+		adapter, err = adapters.CreateProxyAdapter(a.Config.Host, a.Config.Content)
 		if err != nil {
-			return nil, errors.Context(err, "unable to create proxy adapter")
+			return errors.Context(err, "unable to create proxy adapter")
 		}
 	}
 
-	return &app{
-		Config:  config,
-		Adapter: adapter,
-		Started: time.Now(),
-	}, nil
+	a.Adapter = adapter
+	return nil
 }
 
 // Start starts an application and monitors activity
@@ -75,7 +85,14 @@ func (a *app) Stop(reason string, e error) error {
 }
 
 func (a *app) Restart() error {
-	return a.Adapter.Stop(errors.New("user requested restart"))
+	a.Adapter.Stop(errors.New("requested restart"))
+	if err := a.newAdapter(); err != nil {
+		return err
+	}
+	if err := a.Start(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Status returns the status of the application
@@ -174,11 +191,8 @@ func findAppForHost(host string) (*app, error) {
 
 	if app != nil {
 		if app.Status() == "stopped" {
-			err = app.Start()
-			if err != nil {
-				log.Println("[app]", host, config.Key, "error starting app", err)
-				app.Stop("app failed to start", err)
-				return nil, errors.Context(err, "app failed to start")
+			if err := app.Restart(); err != nil {
+				return nil, errors.Context(err, "app failed to restart")
 			}
 		}
 		return app, nil
@@ -192,10 +206,8 @@ func findAppForHost(host string) (*app, error) {
 		return nil, errors.Context(err, "app failed to create")
 	}
 
-	err = app.Start()
-	if err != nil {
+	if err := app.Start(); err != nil {
 		log.Println("[app]", host, config.Key, "error starting app", err)
-		app.Stop("app failed to start", err)
 		return nil, errors.Context(err, "app failed to start")
 	}
 

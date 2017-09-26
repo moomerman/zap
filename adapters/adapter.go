@@ -24,8 +24,6 @@ const (
 	StatusStarting Status = "starting"
 	// StatusRunning is the successful running state of the adapter
 	StatusRunning Status = "running"
-	// StatusRestarting is the state when an adapter is restarting
-	StatusRestarting Status = "restarting"
 	// StatusStopping is the state when an adapter is stopping
 	StatusStopping Status = "stopping"
 	// StatusStopped is the state when an adapter has been stopped

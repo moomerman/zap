@@ -1,0 +1,49 @@
+<pre id="log">{{ .LogTail }}</pre>
+
+<script type="text/javascript">
+  /** @type{boolean} **/
+  var first = true;
+
+  function fetchLog() {
+    setTimeout(function () { get("/zap/api/log", updateLog); }, 500);
+  }
+
+  function updateLog(data) {
+    /** @type{boolean} **/
+    var scroll = shouldScroll();
+
+    document.getElementById("log").innerHTML = data;
+
+    if (scroll) {
+      scrollToBottom();
+    }
+
+    fetchLog();
+  }
+
+  function shouldScroll() {
+    if (first) {
+      first = false;
+      return true;
+    }
+    return (window.innerHeight + window.scrollY) >= document.body.offsetHeight;
+  }
+
+  function scrollToBottom() {
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function get(url, callback) {
+    var xmlhttp;
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+      if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+        callback(xmlhttp.responseText);
+      }
+    }
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+  }
+
+  fetchLog();
+</script>

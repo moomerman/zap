@@ -10,19 +10,20 @@
 
   function fetchLog() {
     if (status != "running") {
-      setTimeout(function () { get("/zap/log", updateLog); }, 500);
+      setTimeout(function () { get("/zap/api/log", updateLog); }, 500);
     }
   }
 
   function updateLog(data) {
     document.getElementById("log").innerHTML = data;
+    if (status == "starting") {
+      window.scrollTo(0, document.body.scrollHeight);
+    }
     fetchLog();
   }
 
   function fetchState() {
-    // if (status != "running") {
-      setTimeout(function () { get("/zap/state", updateState); }, 2000);
-    // }
+    setTimeout(function () { get("/zap/api/state", updateState); }, 2000);
   }
 
   function updateState(data) {

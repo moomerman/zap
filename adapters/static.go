@@ -12,8 +12,9 @@ import (
 
 // StaticAdapter holds the state for the application
 type StaticAdapter struct {
-	Dir   string
-	State Status
+	Dir     string
+	State   Status
+	BootLog string
 }
 
 // CreateStaticAdapter creates a new static HTML application
@@ -73,9 +74,6 @@ func (d *StaticAdapter) Stop(reason error) error {
 	d.State = StatusStopped
 	return nil
 }
-
-// Restart restarts the adapter
-func (d *StaticAdapter) Restart(error) error { return nil }
 
 // Command doesn't do anything
 func (d *StaticAdapter) Command() *exec.Cmd { return nil }
