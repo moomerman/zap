@@ -24,7 +24,7 @@ type app struct {
 	Started  time.Time
 }
 
-// newApp creates a new App for the given host
+// newApp creates a new App for the given configuration
 func newApp(config *AppConfig) (*app, error) {
 	app := &app{
 		Config:  config,
@@ -70,7 +70,7 @@ func (a *app) Start() error {
 	return nil
 }
 
-// Stop stops an application
+// Stop stops an application handler and removes the app
 func (a *app) Stop(reason string, e error) error {
 	log.Println("[app]", a.Config.Host, "stopping", reason, e)
 	lock.Lock()
@@ -79,7 +79,8 @@ func (a *app) Stop(reason string, e error) error {
 	return a.Adapter.Stop(errors.Context(e, reason))
 }
 
-func (a *app) Restart() error {
+// Restart restarts an application adapter
+func (a *app) RestartAdapter() error {
 	if err := a.Adapter.Stop(errors.New("requested restart")); err != nil {
 		log.Println("[app]", a.Config.Host, "error stopping adapter on restart", err)
 	}
@@ -159,7 +160,7 @@ func findAppForHost(host string) (*app, error) {
 
 	if app != nil {
 		if app.Status() == "stopped" {
-			if err := app.Restart(); err != nil {
+			if err := app.RestartAdapter(); err != nil {
 				return nil, errors.Context(err, "app failed to restart")
 			}
 		}

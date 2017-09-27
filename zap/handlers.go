@@ -66,7 +66,7 @@ func restartHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app := r.Context().Value(appKey).(*app)
 
-		if err := app.Restart(); err != nil {
+		if err := app.RestartAdapter(); err != nil {
 			log.Println("[app]", app.Config.Host, "internal server error", err)
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		}
