@@ -1,6 +1,7 @@
 package zap
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"log"
@@ -24,16 +25,16 @@ type Server struct {
 func NewServer() *Server {
 	httpsMux := http.NewServeMux()
 	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
-	httpsMux.HandleFunc("/zap/api/log", logAPIHandler())
-	httpsMux.HandleFunc("/zap/api/state", stateAPIHandler())
+	httpsMux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler()))
+	httpsMux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler()))
 	httpsMux.HandleFunc("/zap/api/apps", appsAPIHandler())
-	httpsMux.HandleFunc("/zap/log", logHandler())
-	httpsMux.HandleFunc("/zap/restart", restartHandler())
-	httpsMux.HandleFunc("/zap", statusHandler())
-	httpsMux.HandleFunc("/", appHandler())
+	httpsMux.HandleFunc("/zap/log", findAppHandler(logHandler()))
+	httpsMux.HandleFunc("/zap/restart", findAppHandler(restartHandler()))
+	httpsMux.HandleFunc("/zap", findAppHandler(statusHandler()))
+	httpsMux.HandleFunc("/", findAppHandler(appHandler()))
 
 	httpMux := http.NewServeMux()
-	httpMux.HandleFunc("/", appHandler())
+	httpMux.HandleFunc("/", findAppHandler(appHandler()))
 
 	http := startHTTP(httpMux)
 	https := startHTTPS(httpsMux)
@@ -111,13 +112,25 @@ func startHTTP(handler http.Handler) *http.Server {
 	}
 }
 
-func appHandler() func(http.ResponseWriter, *http.Request) {
+type contextKey string
+
+var appKey contextKey = "app"
+
+func findAppHandler(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app, err := findAppForHost(r.Host)
 		if err != nil {
 			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
 			return
 		}
+		ctx := context.WithValue(r.Context(), appKey, app)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	}
+}
+
+func appHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app := r.Context().Value(appKey).(*app)
 
 		switch app.Status() {
 		case "running":
@@ -130,36 +143,21 @@ func appHandler() func(http.ResponseWriter, *http.Request) {
 
 func statusHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
-			return
-		}
-
+		app := r.Context().Value(appKey).(*app)
 		renderer.HTML(w, http.StatusOK, "app", app)
 	}
 }
 
 func logHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
-			return
-		}
-
+		app := r.Context().Value(appKey).(*app)
 		renderer.HTML(w, http.StatusOK, "log", app)
 	}
 }
 
 func restartHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
-			return
-		}
+		app := r.Context().Value(appKey).(*app)
 
 		if err := app.Restart(); err != nil {
 			log.Println("[app]", app.Config.Host, "internal server error", err)
@@ -172,11 +170,7 @@ func restartHandler() func(http.ResponseWriter, *http.Request) {
 
 func logAPIHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			http.Error(w, "502 App Not Found", http.StatusBadGateway)
-			return
-		}
+		app := r.Context().Value(appKey).(*app)
 
 		app.WriteLog(w)
 	}
@@ -184,13 +178,9 @@ func logAPIHandler() func(http.ResponseWriter, *http.Request) {
 
 func stateAPIHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		app, err := findAppForHost(r.Host)
-		if err != nil {
-			renderer.HTML(w, http.StatusBadGateway, "502", "App Not Found")
-			return
-		}
+		app := r.Context().Value(appKey).(*app)
 
-		content, err := json.MarshalIndent(map[string]interface{}{
+		content, _ := json.MarshalIndent(map[string]interface{}{
 			"app":    app,
 			"uptime": time.Since(app.Started).String(),
 			"status": app.Status(),
