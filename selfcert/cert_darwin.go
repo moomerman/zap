@@ -1,4 +1,4 @@
-package cert
+package selfcert
 
 import (
 	"fmt"

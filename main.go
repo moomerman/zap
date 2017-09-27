@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/moomerman/zap/cert"
 	"github.com/moomerman/zap/devdns"
+	"github.com/moomerman/zap/selfcert"
 	"github.com/moomerman/zap/zap"
 )
 
@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *fInstall {
-		err := cert.CreateCert()
+		err := selfcert.CreateCert()
 		if err != nil {
 			log.Fatal("Unable to install self-signed certificate", err)
 		}

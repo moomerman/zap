@@ -1,6 +1,4 @@
-package cert
-
-// based on https://github.com/puma/puma-dev/blob/master/dev/ssl.go
+package selfcert
 
 import (
 	"crypto/ecdsa"
