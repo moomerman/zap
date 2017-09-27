@@ -3,8 +3,11 @@ package adapters
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
+	"os"
+	"path"
 )
 
 // Adapter defines the interface for an Adapter implementation
@@ -31,6 +34,37 @@ const (
 	// StatusError is the state when an error has occurred
 	StatusError Status = "error"
 )
+
+// GetAdapter returns the corresponding adapter for the given
+// host/dir combination
+func GetAdapter(host, dir string) (Adapter, error) {
+	_, err := os.Stat(path.Join(dir, "mix.exs"))
+	if err == nil {
+		log.Println("[app]", host, "using the phoenix adapter (found mix.exs)")
+		return CreatePhoenixAdapter(host, dir)
+	}
+
+	_, err = os.Stat(path.Join(dir, "Gemfile"))
+	if err == nil {
+		log.Println("[app]", host, "using the rails adapter (found Gemfile)")
+		return CreateRailsAdapter(host, dir)
+	}
+
+	_, err = os.Stat(path.Join(dir, ".buffalo.dev.yml"))
+	if err == nil {
+		log.Println("[app]", host, "using the buffalo adapter (found .buffalo.dev.yml)")
+		return CreateBuffaloAdapter(host, dir)
+	}
+
+	_, err = os.Stat(path.Join(dir, "config.toml"))
+	if err == nil {
+		log.Println("[app]", host, "using the hugo adapter (found config.toml)")
+		return CreateHugoAdapter(host, dir)
+	}
+
+	log.Println("[app]", host, "using the static adapter")
+	return CreateStaticAdapter(dir)
+}
 
 func findAvailablePort() (string, error) {
 	l, err := net.Listen("tcp", ":0")

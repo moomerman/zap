@@ -99,8 +99,12 @@ func (a *AppProxyAdapter) start() error {
 		return e
 	}
 
-	a.proxy = proxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
+	proxy, err := proxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
+	if err != nil {
+		return err
+	}
 
+	a.proxy = proxy
 	go a.tail()
 	go a.checkPort()
 

@@ -30,7 +30,12 @@ func CreateProxyAdapter(host, proxy string) (Adapter, error) {
 func (a *ProxyAdapter) Start() error {
 	a.State = StatusStarting
 	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
-	a.proxy = proxy.NewProxy(a.Proxy, a.Host)
+	proxy, err := proxy.NewProxy(a.Proxy, a.Host)
+	if err != nil {
+		return err
+	}
+
+	a.proxy = proxy
 	a.State = StatusRunning
 	return nil
 }

@@ -6,8 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -46,7 +44,7 @@ func (a *app) newAdapter() error {
 	var err error
 
 	if a.Config.Dir != "" {
-		adapter, err = getAdapter(a.Config)
+		adapter, err = adapters.GetAdapter(a.Config.Host, a.Config.Dir)
 		if err != nil {
 			return errors.Context(err, "could not determine adapter")
 		}
@@ -113,35 +111,6 @@ func (a *app) LogTail() string {
 	buf := bytes.NewBufferString("")
 	a.WriteLog(buf)
 	return buf.String()
-}
-
-func getAdapter(config *HostConfig) (adapters.Adapter, error) {
-	_, err := os.Stat(path.Join(config.Dir, "mix.exs"))
-	if err == nil {
-		log.Println("[app]", config.Host, "using the phoenix adapter (found mix.exs)")
-		return adapters.CreatePhoenixAdapter(config.Host, config.Dir)
-	}
-
-	_, err = os.Stat(path.Join(config.Dir, "Gemfile"))
-	if err == nil {
-		log.Println("[app]", config.Host, "using the rails adapter (found Gemfile)")
-		return adapters.CreateRailsAdapter(config.Host, config.Dir)
-	}
-
-	_, err = os.Stat(path.Join(config.Dir, ".buffalo.dev.yml"))
-	if err == nil {
-		log.Println("[app]", config.Host, "using the buffalo adapter (found .buffalo.dev.yml)")
-		return adapters.CreateBuffaloAdapter(config.Host, config.Dir)
-	}
-
-	_, err = os.Stat(path.Join(config.Dir, "config.toml"))
-	if err == nil {
-		log.Println("[app]", config.Host, "using the hugo adapter (found config.toml)")
-		return adapters.CreateHugoAdapter(config.Host, config.Dir)
-	}
-
-	log.Println("[app]", config.Host, "using the static adapter")
-	return adapters.CreateStaticAdapter(config.Dir)
 }
 
 func (a *app) idleMonitor() {

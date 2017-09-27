@@ -19,10 +19,10 @@ type MultiProxy struct {
 }
 
 // NewProxy returns a new multiproxy
-func NewProxy(targetURL string, hostname string) *MultiProxy {
+func NewProxy(targetURL string, hostname string) (*MultiProxy, error) {
 	target, err := url.Parse(targetURL)
 	if err != nil {
-		panic(err) // TODO: remove this!
+		return nil, err
 	}
 
 	targetQuery := target.RawQuery
@@ -64,7 +64,7 @@ func NewProxy(targetURL string, hostname string) *MultiProxy {
 		Hostname: hostname,
 		proxy:    proxy,
 		wsproxy:  wsproxy,
-	}
+	}, nil
 }
 
 // Proxy determines whether to proxy a HTTP request or a WS one
