@@ -32,8 +32,8 @@ Inspired by pow (http://pow.cx/) and puma-dev (https://github.com/puma/puma-dev)
 
 ## Development
 
-To recompile the HTML templates
+To recompile the HTML templates, build and restart the server
 
 ```
-go-bindata -pkg zap -o zap/templates.go templates/
+pushd zap; go-bindata -pkg zap -o templates.go templates/; popd && go build -o zapd main.go && pkill zapd
 ```
