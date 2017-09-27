@@ -15,9 +15,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/miekg/dns"
+  packages = ["."]
+  revision = "eccf8bbe836c8cedcdbfbb593ef04da003a0b034"
+
+[[projects]]
+  branch = "master"
   name = "github.com/puma/puma-dev"
   packages = ["dev/launch","homedir","linebuffer"]
   revision = "5c92d487b83a50c44dc8864bbe8952328268a7cf"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/unrolled/render"
+  packages = ["."]
+  revision = "a0ec58421ddf111bd7efd3b7087399ca7d5da2f1"
 
 [[projects]]
   branch = "master"
@@ -46,6 +58,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "490756a39ec7fd99f1618c17c5013ea4b122116c0194e578559a7a8751d59231"
+  inputs-digest = "9728a6eb336a3385d5dd124f7fda5745340dd688b4efeee686b554e8962e2d16"
   solver-name = "gps-cdcl"
   solver-version = 1
