@@ -2,7 +2,6 @@ package zap
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -73,7 +72,7 @@ func (a *app) Start() error {
 
 // Stop stops an application
 func (a *app) Stop(reason string, e error) error {
-	fmt.Printf("! Stopping '%s' %s %s\n", a.Config.Host, reason, e)
+	log.Println("[app]", a.Config.Host, "stopping", reason, e)
 	lock.Lock()
 	delete(apps, a.Config.Key)
 	lock.Unlock()
@@ -81,7 +80,9 @@ func (a *app) Stop(reason string, e error) error {
 }
 
 func (a *app) Restart() error {
-	a.Adapter.Stop(errors.New("requested restart"))
+	if err := a.Adapter.Stop(errors.New("requested restart")); err != nil {
+		log.Println("[app]", a.Config.Host, "error stopping adapter on restart", err)
+	}
 	if err := a.newAdapter(); err != nil {
 		return err
 	}
@@ -177,8 +178,6 @@ func findAppForHost(host string) (*app, error) {
 		log.Println("[app]", host, config.Key, "error starting app", err)
 		return nil, errors.Context(err, "app failed to start")
 	}
-
-	log.Println("[app]", host, config.Key, "created app")
 
 	lock.Lock()
 	apps[config.Key] = app
