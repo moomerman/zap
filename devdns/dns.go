@@ -8,10 +8,44 @@ import (
 	"github.com/miekg/dns"
 )
 
+// DefaultAddress is the default address for the DNS server
 const DefaultAddress = ":9253"
 
+// DNSResponder holds the configuration for the DNS server
 type DNSResponder struct {
 	Address string
+}
+
+// Serve starts the DNS server
+func (d *DNSResponder) Serve(domains []string) error {
+	for _, domain := range domains {
+		dns.HandleFunc(domain+".", d.handleDNS)
+	}
+
+	addr := d.Address
+	if addr == "" {
+		addr = DefaultAddress
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		server := &dns.Server{Addr: addr, Net: "udp", TsigSecret: nil}
+		server.ListenAndServe()
+	}()
+
+	go func() {
+		defer wg.Done()
+		server := &dns.Server{Addr: addr, Net: "tcp", TsigSecret: nil}
+		server.ListenAndServe()
+	}()
+
+	wg.Wait()
+
+	return nil
 }
 
 func (d *DNSResponder) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
@@ -56,35 +90,4 @@ func (d *DNSResponder) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	w.WriteMsg(m)
-}
-
-func (d *DNSResponder) Serve(domains []string) error {
-	for _, domain := range domains {
-		dns.HandleFunc(domain+".", d.handleDNS)
-	}
-
-	addr := d.Address
-	if addr == "" {
-		addr = DefaultAddress
-	}
-
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		server := &dns.Server{Addr: addr, Net: "udp", TsigSecret: nil}
-		server.ListenAndServe()
-	}()
-
-	go func() {
-		defer wg.Done()
-		server := &dns.Server{Addr: addr, Net: "tcp", TsigSecret: nil}
-		server.ListenAndServe()
-	}()
-
-	wg.Wait()
-
-	return nil
 }

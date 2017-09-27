@@ -12,7 +12,7 @@ func Example() {
 	port := 9253
 	domains := []string{"test", "dev"}
 
-	if err := devdns.ConfigureResolver(domains, port); err != nil {
+	if err := devdns.ConfigureResolver(domains, port, "example"); err != nil {
 		log.Println(err)
 		panic("couldn't configure resolver")
 	}
