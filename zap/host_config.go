@@ -18,8 +18,8 @@ const appsPath = "~/.zap"
 type HostConfig struct {
 	Host    string
 	Path    string
-	Dir     string
-	Content string
+	Dir     string `json:",omitempty"`
+	Content string `json:",omitempty"`
 	Key     string
 }
 

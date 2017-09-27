@@ -12,6 +12,7 @@ import (
 
 // StaticAdapter holds the state for the application
 type StaticAdapter struct {
+	Name    string
 	Dir     string
 	State   Status
 	BootLog string
@@ -20,7 +21,8 @@ type StaticAdapter struct {
 // CreateStaticAdapter creates a new static HTML application
 func CreateStaticAdapter(dir string) (Adapter, error) {
 	return &StaticAdapter{
-		Dir: dir,
+		Name: "Static",
+		Dir:  dir,
 	}, nil
 }
 

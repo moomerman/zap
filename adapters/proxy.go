@@ -11,6 +11,7 @@ import (
 
 // ProxyAdapter holds the state for the application
 type ProxyAdapter struct {
+	Name    string
 	Host    string
 	Proxy   string
 	proxy   *proxy.MultiProxy
@@ -21,6 +22,7 @@ type ProxyAdapter struct {
 // CreateProxyAdapter creates a new proxy
 func CreateProxyAdapter(host, proxy string) (Adapter, error) {
 	return &ProxyAdapter{
+		Name:  "Proxy",
 		Host:  host,
 		Proxy: proxy,
 	}, nil

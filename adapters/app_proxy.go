@@ -23,21 +23,23 @@ import (
 type AppProxyAdapter struct {
 	sync.Mutex
 
+	Name            string
 	Host            string
 	Dir             string
 	Port            string
-	ShellCommand    string
-	EnvPortName     string
-	RestartPatterns []*regexp.Regexp
+	Command         string
+	EnvPortName     string           `json:",omitempty"`
+	RestartPatterns []*regexp.Regexp `json:",omitempty"`
 	State           Status
 	BootLog         string
 	Pid             int
 
-	cmd        *exec.Cmd
-	proxy      *proxy.MultiProxy
-	stdout     io.Reader
-	log        linebuffer.LineBuffer
-	cancelChan chan struct{}
+	shellCommand string
+	cmd          *exec.Cmd
+	proxy        *proxy.MultiProxy
+	stdout       io.Reader
+	log          linebuffer.LineBuffer
+	cancelChan   chan struct{}
 }
 
 // Start starts the application
@@ -93,7 +95,7 @@ func (a *AppProxyAdapter) start() error {
 
 	a.Port = port
 
-	if err := a.startApplication(a.ShellCommand); err != nil {
+	if err := a.startApplication(a.shellCommand); err != nil {
 		e := errors.Context(err, "could not start application")
 		a.error(e)
 		return e
@@ -150,9 +152,10 @@ func (a *AppProxyAdapter) error(err error) error {
 func (a *AppProxyAdapter) startApplication(command string) error {
 	shell := os.Getenv("SHELL")
 
-	cmd := exec.Command(shell, "-l", "-i", "-c",
-		fmt.Sprintf(command, a.Port, a.Host))
+	command = fmt.Sprintf(command, a.Port, a.Host)
+	a.Command = command
 
+	cmd := exec.Command(shell, "-l", "-c", command)
 	cmd.Dir = a.Dir
 
 	cmd.Env = os.Environ()

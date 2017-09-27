@@ -7,8 +7,9 @@ exec hugo server -D -p %s -b https://%s/ --appendPort=false --liveReloadPort=443
 // CreateHugoAdapter creates a new hugo adapter
 func CreateHugoAdapter(host, dir string) (Adapter, error) {
 	return &AppProxyAdapter{
+		Name:         "Hugo",
 		Host:         host,
 		Dir:          dir,
-		ShellCommand: hugoShellCommand,
+		shellCommand: hugoShellCommand,
 	}, nil
 }

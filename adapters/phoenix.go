@@ -3,7 +3,6 @@ package adapters
 import "regexp"
 
 const phoenixShellCommand = `exec bash -c '
-cd %s
 exec mix do deps.get, phx.server'
 `
 
@@ -15,10 +14,11 @@ func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 	mixFileChanged, nil := regexp.Compile("You must restart your server")
 
 	return &AppProxyAdapter{
+		Name:            "Phoenix",
 		Host:            host,
 		Dir:             dir,
-		ShellCommand:    phoenixShellCommand,
 		RestartPatterns: []*regexp.Regexp{mixFileChanged},
 		EnvPortName:     "PHX_PORT",
+		shellCommand:    phoenixShellCommand,
 	}, nil
 }
