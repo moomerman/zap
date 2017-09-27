@@ -18,14 +18,14 @@ var lock sync.Mutex
 
 // app holds the state of a running Application
 type app struct {
-	Config   *HostConfig
+	Config   *AppConfig
 	LastUsed time.Time
 	Adapter  adapters.Adapter
 	Started  time.Time
 }
 
 // newApp creates a new App for the given host
-func newApp(config *HostConfig) (*app, error) {
+func newApp(config *AppConfig) (*app, error) {
 	app := &app{
 		Config:  config,
 		Started: time.Now(),
@@ -144,7 +144,7 @@ func findAppForHost(host string) (*app, error) {
 	hostParts := strings.Split(host, ":")
 	host = hostParts[0]
 
-	config, err := getHostConfig(host)
+	config, err := getAppConfig(host)
 	if err != nil {
 		return nil, err
 	}

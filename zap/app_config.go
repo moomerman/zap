@@ -14,8 +14,8 @@ import (
 
 const appsPath = "~/.zap"
 
-// HostConfig holds the configuration for a given host host
-type HostConfig struct {
+// AppConfig holds the configuration for a given host host
+type AppConfig struct {
 	Host    string
 	Path    string
 	Dir     string `json:",omitempty"`
@@ -23,7 +23,7 @@ type HostConfig struct {
 	Key     string
 }
 
-func getHostConfig(host string) (*HostConfig, error) {
+func getAppConfig(host string) (*AppConfig, error) {
 	path, stat, err := getClosestMatchingPath(host)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func getHostConfig(host string) (*HostConfig, error) {
 			return nil, err
 		}
 
-		return &HostConfig{
+		return &AppConfig{
 			Host: host,
 			Path: path,
 			Dir:  dir,
@@ -51,7 +51,7 @@ func getHostConfig(host string) (*HostConfig, error) {
 	return config, nil
 }
 
-func readConfigFromFile(path, host string) (*HostConfig, error) {
+func readConfigFromFile(path, host string) (*AppConfig, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func readConfigFromFile(path, host string) (*HostConfig, error) {
 
 	}
 
-	return &HostConfig{
+	return &AppConfig{
 		Host:    host,
 		Path:    path,
 		Content: proxy,
