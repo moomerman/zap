@@ -43,6 +43,15 @@ func getHostConfig(host string) (*HostConfig, error) {
 		}, nil
 	}
 
+	config, err := readConfigFromFile(path, host)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func readConfigFromFile(path, host string) (*HostConfig, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
