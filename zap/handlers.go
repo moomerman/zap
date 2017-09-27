@@ -11,10 +11,6 @@ import (
 )
 
 type contextKey string
-type errorPage struct {
-	code  int
-	title string
-}
 
 var (
 	appKey contextKey = "app"

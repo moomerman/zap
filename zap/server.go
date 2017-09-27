@@ -19,26 +19,9 @@ type Server struct {
 
 // NewServer creates the HTTP and HTTPS servers
 func NewServer() *Server {
-	httpsMux := http.NewServeMux()
-	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
-	// Maybe have a zapHandler that checks for localhost and then delegates requests
-	httpsMux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler()))
-	httpsMux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler()))
-	httpsMux.HandleFunc("/zap/api/apps", appsAPIHandler())
-	httpsMux.HandleFunc("/zap/log", findAppHandler(logHandler()))
-	httpsMux.HandleFunc("/zap/restart", findAppHandler(restartHandler()))
-	httpsMux.HandleFunc("/zap", findAppHandler(statusHandler()))
-	httpsMux.HandleFunc("/", findAppHandler(appHandler()))
-
-	httpMux := http.NewServeMux()
-	httpMux.HandleFunc("/", findAppHandler(appHandler()))
-
-	http := startHTTP(httpMux)
-	https := startHTTPS(httpsMux)
-
 	return &Server{
-		http:  http,
-		https: https,
+		http:  createHTTPServer(),
+		https: createHTTPSServer(),
 	}
 }
 
@@ -77,7 +60,18 @@ func (s *Server) Serve(bind string) {
 	}
 }
 
-func startHTTPS(handler http.Handler) *http.Server {
+func createHTTPSServer() *http.Server {
+	mux := http.NewServeMux()
+	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
+	// Maybe have a zapHandler that checks for localhost and then delegates requests
+	mux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler()))
+	mux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler()))
+	mux.HandleFunc("/zap/api/apps", appsAPIHandler())
+	mux.HandleFunc("/zap/log", findAppHandler(logHandler()))
+	mux.HandleFunc("/zap/restart", findAppHandler(restartHandler()))
+	mux.HandleFunc("/zap", findAppHandler(statusHandler()))
+	mux.HandleFunc("/", findAppHandler(appHandler()))
+
 	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("unable to create new cert cache", err)
@@ -88,7 +82,7 @@ func startHTTPS(handler http.Handler) *http.Server {
 	}
 
 	server := &http.Server{
-		Handler:   handler,
+		Handler:   mux,
 		TLSConfig: tlsConfig,
 	}
 	http2.ConfigureServer(server, nil)
@@ -96,8 +90,11 @@ func startHTTPS(handler http.Handler) *http.Server {
 	return server
 }
 
-func startHTTP(handler http.Handler) *http.Server {
+func createHTTPServer() *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", findAppHandler(appHandler()))
+
 	return &http.Server{
-		Handler: handler,
+		Handler: mux,
 	}
 }
