@@ -1,4 +1,4 @@
-package selfcert_test
+package cert_test
 
 import (
 	"crypto/tls"
@@ -6,11 +6,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/moomerman/zap/selfcert"
+	"github.com/moomerman/zap/cert"
 )
 
 func Example() {
-	cache, err := selfcert.NewCache()
+	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("Unable to create new cert cache", err)
 	}

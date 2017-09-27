@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/moomerman/zap/selfcert"
+	"github.com/moomerman/zap/cert"
 	"github.com/puma/puma-dev/dev/launch"
 	"github.com/unrolled/render"
 	"golang.org/x/net/http2"
@@ -87,7 +87,7 @@ func (s *Server) Serve(bind string) {
 }
 
 func startHTTPS(handler http.Handler) *http.Server {
-	cache, err := selfcert.NewCache()
+	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("unable to create new cert cache", err)
 	}

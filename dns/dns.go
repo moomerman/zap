@@ -1,4 +1,4 @@
-package devdns
+package dns
 
 import (
 	"net"
@@ -11,13 +11,13 @@ import (
 // DefaultAddress is the default address for the DNS server
 const DefaultAddress = ":9253"
 
-// DNSResponder holds the configuration for the DNS server
-type DNSResponder struct {
+// Responder holds the configuration for the DNS server
+type Responder struct {
 	Address string
 }
 
 // Serve starts the DNS server
-func (d *DNSResponder) Serve(domains []string) error {
+func (d *Responder) Serve(domains []string) error {
 	for _, domain := range domains {
 		dns.HandleFunc(domain+".", d.handleDNS)
 	}
@@ -48,7 +48,7 @@ func (d *DNSResponder) Serve(domains []string) error {
 	return nil
 }
 
-func (d *DNSResponder) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
+func (d *Responder) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 	var (
 		v4 bool
 		rr dns.RR

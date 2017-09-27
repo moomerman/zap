@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"os/exec"
 
-	"github.com/moomerman/zap/multiproxy"
+	"github.com/moomerman/zap/proxy"
 )
 
 // ProxyAdapter holds the state for the application
 type ProxyAdapter struct {
 	Host    string
 	Proxy   string
-	proxy   *multiproxy.MultiProxy
+	proxy   *proxy.MultiProxy
 	State   Status
 	BootLog string
 }
@@ -30,7 +30,7 @@ func CreateProxyAdapter(host, proxy string) (Adapter, error) {
 func (a *ProxyAdapter) Start() error {
 	a.State = StatusStarting
 	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
-	a.proxy = multiproxy.NewProxy(a.Proxy, a.Host)
+	a.proxy = proxy.NewProxy(a.Proxy, a.Host)
 	a.State = StatusRunning
 	return nil
 }

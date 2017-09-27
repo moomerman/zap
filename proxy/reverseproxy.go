@@ -1,4 +1,4 @@
-package multiproxy
+package proxy
 
 import (
 	"net/http"

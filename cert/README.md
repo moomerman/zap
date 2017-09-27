@@ -1,4 +1,4 @@
-# package selfcert
+# package cert
 
 This package contains functions for creating a local development root
 certificate that can then be used with net/http tlsConfig servers to dynamically
@@ -29,7 +29,7 @@ valid certificates dynamically:
   }
 ```
 
-See https://github.com/moomerman/zap/tree/master/selfcert/example_test.go for
+See https://github.com/moomerman/zap/tree/master/cert/example_test.go for
 a full example.
 
 ## Credits

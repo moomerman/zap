@@ -1,4 +1,4 @@
-# package devdns
+# package dns
 
 This package provides an installer and an implementation of a DNS
 server that can serve requests for a given list of tlds.

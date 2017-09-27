@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/moomerman/zap/devdns"
-	"github.com/moomerman/zap/selfcert"
+	"github.com/moomerman/zap/cert"
+	"github.com/moomerman/zap/dns"
 	"github.com/moomerman/zap/zap"
 )
 
@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *fInstall {
-		err := selfcert.CreateCert()
+		err := cert.CreateCert()
 		if err != nil {
 			log.Fatal("Unable to install self-signed certificate", err)
 		}
@@ -45,11 +45,11 @@ func main() {
 	}
 
 	domains := strings.Split(*fDNSDomains, ":")
-	dns := &devdns.DNSResponder{
+	responder := &dns.Responder{
 		Address: fmt.Sprintf("127.0.0.1:%d", *fDNSPort),
 	}
-	log.Println("[dns]", "server running at", dns.Address)
-	go dns.Serve(domains)
+	log.Println("[dns]", "server running at", responder.Address)
+	go responder.Serve(domains)
 
 	var httpPort, httpsPort string
 

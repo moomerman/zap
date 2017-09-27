@@ -1,4 +1,4 @@
-package selfcert
+package cert
 
 import (
 	"crypto/ecdsa"

@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/zap/multiproxy"
+	"github.com/moomerman/zap/proxy"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
@@ -34,7 +34,7 @@ type AppProxyAdapter struct {
 	Pid             int
 
 	cmd        *exec.Cmd
-	proxy      *multiproxy.MultiProxy
+	proxy      *proxy.MultiProxy
 	stdout     io.Reader
 	log        linebuffer.LineBuffer
 	cancelChan chan struct{}
@@ -99,7 +99,7 @@ func (a *AppProxyAdapter) start() error {
 		return e
 	}
 
-	a.proxy = multiproxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
+	a.proxy = proxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
 
 	go a.tail()
 	go a.checkPort()

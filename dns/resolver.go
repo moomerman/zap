@@ -1,4 +1,4 @@
-package devdns
+package dns
 
 import (
 	"fmt"
