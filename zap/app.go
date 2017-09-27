@@ -16,8 +16,6 @@ import (
 	"github.com/vektra/errors"
 )
 
-const appsPath = "~/.zap"
-
 var apps map[string]*app
 var lock sync.Mutex
 
