@@ -2,10 +2,6 @@ package adapters
 
 import "regexp"
 
-const phoenixShellCommand = `exec bash -c '
-exec mix do deps.get, phx.server'
-`
-
 // CreatePhoenixAdapter creates a new phoenix adapter
 func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 
@@ -19,6 +15,6 @@ func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
 		Dir:             dir,
 		RestartPatterns: []*regexp.Regexp{mixFileChanged},
 		EnvPortName:     "PHX_PORT",
-		shellCommand:    phoenixShellCommand,
+		shellCommand:    "exec mix do deps.get, phx.server # %s %s",
 	}, nil
 }

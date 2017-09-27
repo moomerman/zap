@@ -1,9 +1,5 @@
 package adapters
 
-const buffaloShellCommand = `exec bash -c '
-exec buffalo dev'
-`
-
 // CreateBuffaloAdapter creates a new buffalo adapter
 func CreateBuffaloAdapter(host, dir string) (Adapter, error) {
 	return &AppProxyAdapter{
@@ -11,6 +7,6 @@ func CreateBuffaloAdapter(host, dir string) (Adapter, error) {
 		Host:         host,
 		Dir:          dir,
 		EnvPortName:  "PORT",
-		shellCommand: buffaloShellCommand,
+		shellCommand: "exec buffalo dev # %s %s",
 	}, nil
 }
