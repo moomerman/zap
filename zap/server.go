@@ -67,6 +67,8 @@ func createHTTPSServer() *http.Server {
 	mux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler()))
 	mux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler()))
 	mux.HandleFunc("/zap/api/apps", appsAPIHandler())
+	mux.HandleFunc("/zap/ngrok/start", findAppHandler(startNgrokHandler()))
+	mux.HandleFunc("/zap/ngrok", findAppHandler(ngrokHandler()))
 	mux.HandleFunc("/zap/log", findAppHandler(logHandler()))
 	mux.HandleFunc("/zap/restart", findAppHandler(restartHandler()))
 	mux.HandleFunc("/zap", findAppHandler(statusHandler()))

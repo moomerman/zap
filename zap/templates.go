@@ -4,6 +4,7 @@
 // templates/app.html
 // templates/layout.html
 // templates/log.html
+// templates/ngrok.html
 // DO NOT EDIT!
 
 package zap
@@ -151,6 +152,26 @@ func templatesLogHtml() (*asset, error) {
 	return a, nil
 }
 
+var _templatesNgrokHtml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x5c\x8e\xb1\x4a\x04\x31\x10\x86\xfb\x3c\xc5\xcf\xf6\x66\xb8\x2b\x25\x0e\x88\x85\x8a\x72\xc2\xe9\x35\x8a\x45\xe0\xb2\x97\xc5\x33\x1b\x92\x5c\x63\xc8\x8b\xd8\xf9\x6a\x3e\x89\xcc\x0a\x11\xac\x06\x66\xfe\xef\x9b\xdf\xf8\x15\x7f\x7f\x7e\x3d\xdb\x88\x33\xd4\x0a\x7d\x35\x87\x71\x3a\xe8\x9b\x39\x17\xb4\x66\xc8\xaf\x58\x29\xe3\xd7\xbc\xb9\xde\x3e\xdc\x19\xf2\x6b\x56\xaa\x56\x4c\x23\xf4\xe6\x90\xe6\x37\xb4\xa6\x00\x13\x59\x01\x80\xb1\xf0\xc9\x8d\x17\x83\xb8\x96\xbb\xde\x6d\xef\xd1\xda\xc0\xff\x37\x86\x2c\xe3\xa5\x03\xbe\x94\x78\x4e\xf4\x97\xba\xdc\xbf\x4f\xe1\x37\x4a\xb9\xd8\x72\xca\x03\x3f\x2e\x13\xbb\x5b\x81\x5f\xe5\x2f\x45\x96\x3a\xee\x98\x5d\x6f\xd2\x9d\xf4\x61\x23\x05\xb1\x89\x21\x95\x45\x90\x0a\x9e\x4e\x21\xb8\xa3\x38\x3a\x1f\xf6\x82\xff\x04\x00\x00\xff\xff\x64\x10\x0c\x2b\x0f\x01\x00\x00")
+
+func templatesNgrokHtmlBytes() ([]byte, error) {
+	return bindataRead(
+		_templatesNgrokHtml,
+		"templates/ngrok.html",
+	)
+}
+
+func templatesNgrokHtml() (*asset, error) {
+	bytes, err := templatesNgrokHtmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "templates/ngrok.html", size: 271, mode: os.FileMode(420), modTime: time.Unix(1506612918, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -207,6 +228,7 @@ var _bindata = map[string]func() (*asset, error){
 	"templates/app.html": templatesAppHtml,
 	"templates/layout.html": templatesLayoutHtml,
 	"templates/log.html": templatesLogHtml,
+	"templates/ngrok.html": templatesNgrokHtml,
 }
 
 // AssetDir returns the file names below a certain
@@ -254,6 +276,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"app.html": &bintree{templatesAppHtml, map[string]*bintree{}},
 		"layout.html": &bintree{templatesLayoutHtml, map[string]*bintree{}},
 		"log.html": &bintree{templatesLogHtml, map[string]*bintree{}},
+		"ngrok.html": &bintree{templatesNgrokHtml, map[string]*bintree{}},
 	}},
 }}
 

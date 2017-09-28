@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moomerman/zap/adapters"
+	"github.com/moomerman/zap/ngrok"
 	"github.com/vektra/errors"
 )
 
@@ -22,6 +23,7 @@ type app struct {
 	LastUsed time.Time
 	Adapter  adapters.Adapter
 	Started  time.Time
+	Ngrok    *ngrok.Tunnel
 }
 
 // newApp creates a new App for the given configuration
@@ -113,6 +115,21 @@ func (a *app) LogTail() string {
 	buf := bytes.NewBufferString("")
 	a.WriteLog(buf)
 	return buf.String()
+}
+
+func (a *app) StartNgrok(host string, port int) error {
+	// TODO: check if another ngrok instance exists
+	// if so, stop it and cleanup
+	ngrok, err := ngrok.StartTunnel(host, port)
+	if err != nil {
+		return err
+	}
+
+	a.Ngrok = ngrok
+
+	// TODO: add the symbolic link
+
+	return nil
 }
 
 func (a *app) idleMonitor() {
