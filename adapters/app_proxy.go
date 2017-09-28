@@ -30,10 +30,10 @@ type AppProxyAdapter struct {
 	Command         string
 	EnvPortName     string           `json:",omitempty"`
 	RestartPatterns []*regexp.Regexp `json:",omitempty"`
-	State           Status
 	BootLog         string
 	Pid             int
 
+	state        Status
 	shellCommand string
 	cmd          *exec.Cmd
 	proxy        *proxy.MultiProxy
@@ -46,7 +46,7 @@ type AppProxyAdapter struct {
 func (a *AppProxyAdapter) Start() error {
 	a.Lock()
 	defer a.Unlock()
-	if a.State == StatusStopping || a.State == StatusRunning {
+	if a.state == StatusStopping || a.state == StatusRunning {
 		return nil
 	}
 
@@ -58,7 +58,7 @@ func (a *AppProxyAdapter) Start() error {
 func (a *AppProxyAdapter) Stop(reason error) error {
 	a.Lock()
 	defer a.Unlock()
-	if a.State == StatusStopping || a.State == StatusStopped {
+	if a.state == StatusStopping || a.state == StatusStopped {
 		return nil
 	}
 
@@ -68,7 +68,9 @@ func (a *AppProxyAdapter) Stop(reason error) error {
 
 // Status returns the status of the adapter
 func (a *AppProxyAdapter) Status() Status {
-	return a.State
+	a.Lock()
+	defer a.Unlock()
+	return a.state
 }
 
 // WriteLog writes the log to the given writer
@@ -83,7 +85,7 @@ func (a *AppProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AppProxyAdapter) start() error {
-	a.State = StatusStarting
+	a.state = StatusStarting
 	a.cancelChan = make(chan struct{})
 
 	port, err := findAvailablePort()
@@ -114,7 +116,7 @@ func (a *AppProxyAdapter) start() error {
 }
 
 func (a *AppProxyAdapter) stop() error {
-	a.State = StatusStopping
+	a.state = StatusStopping
 	close(a.cancelChan)
 
 	err := a.cmd.Process.Kill()
@@ -126,16 +128,14 @@ func (a *AppProxyAdapter) stop() error {
 	a.cmd.Wait()
 
 	log.Println("[app]", a.Host, "shutdown and cleaned up")
-	a.State = StatusStopped
+	a.changeState(StatusStopped)
 	a.Pid = 0
 
 	return nil
 }
 
 func (a *AppProxyAdapter) error(err error) error {
-	a.Lock()
-	defer a.Unlock()
-	if a.State == StatusStopping || a.State == StatusStopped {
+	if a.state == StatusStopping || a.state == StatusStopped {
 		return nil
 	}
 
@@ -145,7 +145,7 @@ func (a *AppProxyAdapter) error(err error) error {
 		return err
 	}
 
-	a.State = StatusError
+	a.changeState(StatusError)
 	return nil
 }
 
@@ -232,7 +232,7 @@ func (a *AppProxyAdapter) checkPort() {
 				buf := bytes.NewBufferString("")
 				a.WriteLog(buf)
 				a.BootLog = buf.String()
-				a.State = StatusRunning
+				a.changeState(StatusRunning)
 				return
 			}
 		case <-time.After(time.Second * 30):
@@ -241,4 +241,10 @@ func (a *AppProxyAdapter) checkPort() {
 			return
 		}
 	}
+}
+
+func (a *AppProxyAdapter) changeState(state Status) {
+	a.Lock()
+	defer a.Unlock()
+	a.state = state
 }

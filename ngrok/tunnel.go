@@ -8,11 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sync"
 	"time"
 )
 
 // Tunnel represents an ngrok tunnel
 type Tunnel struct {
+	sync.Mutex
+
 	Host     string
 	URL      string
 	AdminURL string
@@ -73,13 +76,13 @@ func (n *Tunnel) tail() {
 
 			match := adminR.FindStringSubmatch(line)
 			if len(match) > 0 {
-				n.AdminURL = match[len(match)-1]
+				n.setAdminURL(match[len(match)-1])
 				log.Println("[ngrok] admin url", n.AdminURL)
 			}
 
 			match = urlR.FindStringSubmatch(line)
 			if len(match) > 0 {
-				n.URL = match[len(match)-1]
+				n.setURL(match[len(match)-1])
 				log.Println("[ngrok] tunnel url", n.URL)
 			}
 		}
@@ -101,7 +104,7 @@ func (n *Tunnel) wait() {
 	for {
 		select {
 		case <-ticker.C:
-			if n.URL != "" && n.AdminURL != "" {
+			if n.getURL() != "" && n.getAdminURL() != "" {
 				log.Println("[ngrok]", "ready")
 				return
 			}
@@ -111,6 +114,30 @@ func (n *Tunnel) wait() {
 			return
 		}
 	}
+}
+
+func (n *Tunnel) setURL(url string) {
+	n.Lock()
+	defer n.Unlock()
+	n.URL = url
+}
+
+func (n *Tunnel) getURL() string {
+	n.Lock()
+	defer n.Unlock()
+	return n.URL
+}
+
+func (n *Tunnel) setAdminURL(url string) {
+	n.Lock()
+	defer n.Unlock()
+	n.AdminURL = url
+}
+
+func (n *Tunnel) getAdminURL() string {
+	n.Lock()
+	defer n.Unlock()
+	return n.AdminURL
 }
 
 func startTunnel(host string, port int) (*Tunnel, error) {
