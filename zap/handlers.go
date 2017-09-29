@@ -35,6 +35,8 @@ func findAppHandler(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// ZAP HANDLERS
+
 func appHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		app := r.Context().Value(appKey).(*app)
@@ -82,6 +84,31 @@ func logAPIHandler() func(http.ResponseWriter, *http.Request) {
 		app.WriteLog(w)
 	}
 }
+
+// NGROK HANDLERS
+
+func ngrokHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app := r.Context().Value(appKey).(*app)
+
+		renderer.HTML(w, http.StatusOK, "ngrok", app)
+	}
+}
+
+func startNgrokHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		app := r.Context().Value(appKey).(*app)
+
+		if err := app.StartNgrok(r.Host, 80); err != nil {
+			log.Println("[app]", app.Config.Host, "internal server error", err)
+			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		}
+
+		http.Redirect(w, r, "/zap/ngrok", http.StatusTemporaryRedirect)
+	}
+}
+
+// API HANDLERS
 
 func stateAPIHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {

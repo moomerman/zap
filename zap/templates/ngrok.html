@@ -1,0 +1,11 @@
+<h1>⚡Zap - {{ .Config.Host }}</h1>
+
+<h2>NGROK</h2>
+
+{{ if .Ngrok }}
+  <p>
+    <a href="{{ .Ngrok.URL }}">{{ .Ngrok.URL }}</a> [<a href="http://{{ .Ngrok.AdminURL }}/status">Status UI</a>]
+  </p>
+{{ else }}
+  <p><a href="/zap/ngrok/start">Start Tunnel</a></p>
+{{ end }}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moomerman/zap/adapters"
+	"github.com/moomerman/zap/ngrok"
 	"github.com/vektra/errors"
 )
 
@@ -18,13 +19,16 @@ var lock sync.Mutex
 
 // app holds the state of a running Application
 type app struct {
+	sync.Mutex
+
 	Config   *AppConfig
 	LastUsed time.Time
 	Adapter  adapters.Adapter
 	Started  time.Time
+	Ngrok    *ngrok.Tunnel
 }
 
-// newApp creates a new App for the given configuration
+// newApp creates a new App with the given configuration
 func newApp(config *AppConfig) (*app, error) {
 	app := &app{
 		Config:  config,
@@ -65,7 +69,10 @@ func (a *app) Start() error {
 		return err
 	}
 
+	a.Lock()
 	a.LastUsed = time.Now()
+	defer a.Unlock()
+
 	go a.idleMonitor()
 	return nil
 }
@@ -99,7 +106,9 @@ func (a *app) Status() string {
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.Lock()
 	a.LastUsed = time.Now()
+	a.Unlock()
 	a.Adapter.ServeHTTP(w, r)
 }
 
@@ -113,6 +122,21 @@ func (a *app) LogTail() string {
 	buf := bytes.NewBufferString("")
 	a.WriteLog(buf)
 	return buf.String()
+}
+
+func (a *app) StartNgrok(host string, port int) error {
+	// TODO: check if another ngrok instance exists
+	// if so, stop it and cleanup
+	ngrok, err := ngrok.StartTunnel(host, port)
+	if err != nil {
+		return err
+	}
+
+	a.Ngrok = ngrok
+
+	// TODO: add the symbolic link
+
+	return nil
 }
 
 func (a *app) idleMonitor() {
@@ -133,6 +157,8 @@ func (a *app) idleMonitor() {
 }
 
 func (a *app) idle() bool {
+	a.Lock()
+	defer a.Unlock()
 	diff := time.Since(a.LastUsed)
 	if diff > 60*60*time.Second {
 		return true
@@ -142,8 +168,7 @@ func (a *app) idle() bool {
 }
 
 func findAppForHost(host string) (*app, error) {
-	hostParts := strings.Split(host, ":")
-	host = hostParts[0]
+	host = strings.Split(host, ":")[0]
 
 	config, err := getAppConfig(host)
 	if err != nil {
