@@ -16,8 +16,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
-  packages = ["."]
-  revision = "eccf8bbe836c8cedcdbfbb593ef04da003a0b034"
+  packages = [".","internal/socket"]
+  revision = "946bd9fbed05568b0f3cd188353d8aa28f38b688"
 
 [[projects]]
   branch = "master"
@@ -47,7 +47,7 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["http2","http2/hpack","idna","lex/httplex"]
-  revision = "0a9397675ba34b2845f758fe3cd68828369c6517"
+  revision = "a04bdaca5b32abe1c069418fb7088ae607de5bd0"
 
 [[projects]]
   branch = "master"

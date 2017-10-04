@@ -167,7 +167,7 @@ func templatesNgrokHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/ngrok.html", size: 271, mode: os.FileMode(420), modTime: time.Unix(1506614599, 0)}
+	info := bindataFileInfo{name: "templates/ngrok.html", size: 271, mode: os.FileMode(420), modTime: time.Unix(1507123507, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
