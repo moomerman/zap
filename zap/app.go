@@ -94,10 +94,7 @@ func (a *app) RestartAdapter() error {
 	if err := a.newAdapter(); err != nil {
 		return err
 	}
-	if err := a.Start(); err != nil {
-		return err
-	}
-	return nil
+	return a.Start()
 }
 
 // Status returns the status of the application
