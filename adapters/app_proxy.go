@@ -218,6 +218,7 @@ func (a *AppProxyAdapter) tail() {
 
 func (a *AppProxyAdapter) checkPort() {
 	ticker := time.NewTicker(250 * time.Millisecond)
+	timeout := time.After(time.Second * 30)
 	defer ticker.Stop()
 
 	for {
@@ -228,16 +229,16 @@ func (a *AppProxyAdapter) checkPort() {
 			c, err := net.Dial("tcp", ":"+a.Port)
 			if err == nil {
 				defer c.Close()
-				log.Println("[app]", a.Host, "port available")
+				log.Println("[app]", a.Host, "check port available")
 				buf := bytes.NewBufferString("")
 				a.WriteLog(buf)
 				a.BootLog = buf.String()
 				a.changeState(StatusRunning)
 				return
 			}
-		case <-time.After(time.Second * 30):
-			log.Println("[app]", a.Host, "port timeout")
-			a.error(errors.New("port timeout"))
+		case <-timeout:
+			log.Println("[app]", a.Host, "check port timeout")
+			a.error(errors.New("check port timeout"))
 			return
 		}
 	}
