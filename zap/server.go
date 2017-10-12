@@ -29,40 +29,38 @@ func NewServer() *Server {
 
 // ServeTLS starts the HTTPS server
 func (s *Server) ServeTLS(bind string) {
+	var listener net.Listener
+	var err error
+
 	if bind == "SocketTLS" {
-		listeners, err := launch.SocketListeners(bind)
-		if err != nil {
-			log.Fatal("unable to get launchd socket listener", err)
-		}
-		log.Println("[zap] https listening at", "SocketTLS (launchd)")
-		s.https.Serve(tls.NewListener(listeners[0], s.https.TLSConfig))
+		listener = tls.NewListener(getSocketListener(bind), s.https.TLSConfig)
 	} else {
-		listener, err := tls.Listen("tcp", bind, s.https.TLSConfig)
+		listener, err = tls.Listen("tcp", bind, s.https.TLSConfig)
 		if err != nil {
 			log.Fatal("unable to create tls listener", err)
 		}
-		log.Println("[zap] https listening at", bind)
-		s.https.Serve(listener)
 	}
+
+	log.Println("[zap] https listening at", listener.Addr())
+	s.https.Serve(listener)
 }
 
 // Serve starts the HTTP server
 func (s *Server) Serve(bind string) {
+	var listener net.Listener
+	var err error
+
 	if bind == "Socket" {
-		listeners, err := launch.SocketListeners(bind)
-		if err != nil {
-			log.Fatal("unable to get launchd socket listener", err)
-		}
-		log.Println("[zap] http listening at", "Socket (launchd)")
-		s.http.Serve(listeners[0])
+		listener = getSocketListener(bind)
 	} else {
-		listener, err := net.Listen("tcp", bind)
+		listener, err = net.Listen("tcp", bind)
 		if err != nil {
 			log.Fatal("unable to create listener", err)
 		}
-		log.Println("[zap] http listening at", bind)
-		s.http.Serve(listener)
 	}
+
+	log.Println("[zap] http listening at", listener.Addr())
+	s.http.Serve(listener)
 }
 
 // Stop gracefully stops the HTTP and HTTPS servers
@@ -113,4 +111,12 @@ func createHTTPServer() *http.Server {
 	return &http.Server{
 		Handler: mux,
 	}
+}
+
+func getSocketListener(socket string) net.Listener {
+	listeners, err := launch.SocketListeners(socket)
+	if err != nil {
+		log.Fatal("unable to get launchd socket listener", err)
+	}
+	return listeners[0]
 }

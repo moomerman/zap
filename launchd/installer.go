@@ -40,14 +40,14 @@ func Install(appID, appName string, httpPort, tlsPort int) error {
        <key>Socket</key>
        <dict>
            <key>SockNodeName</key>
-           <string>0.0.0.0</string>
+           <string>127.0.0.1</string>
            <key>SockServiceName</key>
            <string>%d</string>
        </dict>
        <key>SocketTLS</key>
        <dict>
            <key>SockNodeName</key>
-           <string>0.0.0.0</string>
+           <string>127.0.0.1</string>
            <key>SockServiceName</key>
            <string>%d</string>
        </dict>
@@ -62,7 +62,7 @@ func Install(appID, appName string, httpPort, tlsPort int) error {
 
 	logPath := homedir.MustExpand("~/Library/Logs/" + appName + ".log")
 	plistDir := homedir.MustExpand("~/Library/LaunchAgents")
-	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appName + ".plist")
+	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appID + ".plist")
 
 	config := []byte(fmt.Sprintf(userTemplate, appName, binPath, httpPort, tlsPort, logPath, logPath))
 

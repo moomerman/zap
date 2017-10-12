@@ -4,7 +4,7 @@ import (
 	"github.com/moomerman/zap/launchd"
 )
 
-const appID = "com.github.moomerman.zapd"
+const appID = "com.github.moomerman.zap"
 const appName = "zapd"
 
 // Install installs the launch agent on macOS
