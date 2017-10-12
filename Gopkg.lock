@@ -29,7 +29,7 @@
   branch = "master"
   name = "github.com/unrolled/render"
   packages = ["."]
-  revision = "a0ec58421ddf111bd7efd3b7087399ca7d5da2f1"
+  revision = "32bf1ea2a39e4e796d9040b5cf235258cee978c1"
 
 [[projects]]
   branch = "master"
@@ -53,7 +53,7 @@
   branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "1cbadb444a806fd9430d14ad08967ed91da4fa0a"
+  revision = "825fc78a2fd6fa0a5447e300189e3219e05e1f25"
 
 [solve-meta]
   analyzer-name = "dep"
