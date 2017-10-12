@@ -112,7 +112,7 @@ func (a *adapter) start() error {
 	a.state = zadapter.StatusStarting
 	a.cancelChan = make(chan struct{})
 
-	port, err := zadapter.FindAvailablePort()
+	port, err := findAvailablePort()
 	if err != nil {
 		e := errors.Context(err, "couldn't find available port")
 		a.error(e)
@@ -272,4 +272,19 @@ func (a *adapter) changeState(state zadapter.Status) {
 	a.Lock()
 	defer a.Unlock()
 	a.state = state
+}
+
+func findAvailablePort() (string, error) {
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return "", err
+	}
+	l.Close()
+
+	_, port, err := net.SplitHostPort(l.Addr().String())
+	if err != nil {
+		return "", err
+	}
+
+	return port, nil
 }
