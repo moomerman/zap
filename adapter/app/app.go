@@ -1,4 +1,4 @@
-package adapters
+package app
 
 import (
 	"bufio"
@@ -14,13 +14,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/proxy"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
 
-// AppProxyAdapter holds the state for the application
-type AppProxyAdapter struct {
+// Adapter holds the state for the application
+type Adapter struct {
 	sync.Mutex
 
 	Name            string
@@ -32,21 +33,21 @@ type AppProxyAdapter struct {
 	RestartPatterns []*regexp.Regexp `json:",omitempty"`
 	BootLog         string
 	Pid             int
+	ShellCommand    string
 
-	state        Status
-	shellCommand string
-	cmd          *exec.Cmd
-	proxy        *proxy.MultiProxy
-	stdout       io.Reader
-	log          linebuffer.LineBuffer
-	cancelChan   chan struct{}
+	state      adapter.Status
+	cmd        *exec.Cmd
+	proxy      *proxy.MultiProxy
+	stdout     io.Reader
+	log        linebuffer.LineBuffer
+	cancelChan chan struct{}
 }
 
 // Start starts the application
-func (a *AppProxyAdapter) Start() error {
+func (a *Adapter) Start() error {
 	a.Lock()
 	defer a.Unlock()
-	if a.state == StatusStopping || a.state == StatusRunning {
+	if a.state == adapter.StatusStopping || a.state == adapter.StatusRunning {
 		return nil
 	}
 
@@ -55,10 +56,10 @@ func (a *AppProxyAdapter) Start() error {
 }
 
 // Stop stops the application
-func (a *AppProxyAdapter) Stop(reason error) error {
+func (a *Adapter) Stop(reason error) error {
 	a.Lock()
 	defer a.Unlock()
-	if a.state == StatusStopping || a.state == StatusStopped {
+	if a.state == adapter.StatusStopping || a.state == adapter.StatusStopped {
 		return nil
 	}
 
@@ -67,28 +68,28 @@ func (a *AppProxyAdapter) Stop(reason error) error {
 }
 
 // Status returns the status of the adapter
-func (a *AppProxyAdapter) Status() Status {
+func (a *Adapter) Status() adapter.Status {
 	a.Lock()
 	defer a.Unlock()
 	return a.state
 }
 
 // WriteLog writes the log to the given writer
-func (a *AppProxyAdapter) WriteLog(w io.Writer) {
+func (a *Adapter) WriteLog(w io.Writer) {
 	a.log.WriteTo(w)
 }
 
 // ServeHTTP implements the http.Handler interface
-func (a *AppProxyAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("[proxy]", fullURL(r), "->", a.proxy.URL)
+func (a *Adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("[proxy]", adapter.FullURL(r), "->", a.proxy.URL)
 	a.proxy.Proxy(w, r)
 }
 
-func (a *AppProxyAdapter) start() error {
-	a.state = StatusStarting
+func (a *Adapter) start() error {
+	a.state = adapter.StatusStarting
 	a.cancelChan = make(chan struct{})
 
-	port, err := findAvailablePort()
+	port, err := adapter.FindAvailablePort()
 	if err != nil {
 		e := errors.Context(err, "couldn't find available port")
 		a.error(e)
@@ -97,7 +98,7 @@ func (a *AppProxyAdapter) start() error {
 
 	a.Port = port
 
-	if err := a.startApplication(a.shellCommand); err != nil {
+	if err := a.startApplication(a.ShellCommand); err != nil {
 		e := errors.Context(err, "could not start application")
 		a.error(e)
 		return e
@@ -115,8 +116,8 @@ func (a *AppProxyAdapter) start() error {
 	return nil
 }
 
-func (a *AppProxyAdapter) stop() error {
-	a.state = StatusStopping
+func (a *Adapter) stop() error {
+	a.state = adapter.StatusStopping
 	close(a.cancelChan)
 
 	err := a.cmd.Process.Kill()
@@ -128,14 +129,14 @@ func (a *AppProxyAdapter) stop() error {
 	a.cmd.Wait()
 
 	log.Println("[app]", a.Host, "shutdown and cleaned up")
-	a.changeState(StatusStopped)
+	a.changeState(adapter.StatusStopped)
 	a.Pid = 0
 
 	return nil
 }
 
-func (a *AppProxyAdapter) error(err error) error {
-	if a.state == StatusStopping || a.state == StatusStopped {
+func (a *Adapter) error(err error) error {
+	if a.state == adapter.StatusStopping || a.state == adapter.StatusStopped {
 		return nil
 	}
 
@@ -145,11 +146,11 @@ func (a *AppProxyAdapter) error(err error) error {
 		return err
 	}
 
-	a.changeState(StatusError)
+	a.changeState(adapter.StatusError)
 	return nil
 }
 
-func (a *AppProxyAdapter) startApplication(command string) error {
+func (a *Adapter) startApplication(command string) error {
 	shell := os.Getenv("SHELL")
 
 	command = fmt.Sprintf(command, a.Port, a.Host)
@@ -180,7 +181,7 @@ func (a *AppProxyAdapter) startApplication(command string) error {
 	return nil
 }
 
-func (a *AppProxyAdapter) tail() {
+func (a *Adapter) tail() {
 	c := make(chan error)
 
 	go func() {
@@ -216,7 +217,7 @@ func (a *AppProxyAdapter) tail() {
 
 }
 
-func (a *AppProxyAdapter) checkPort() {
+func (a *Adapter) checkPort() {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	timeout := time.After(time.Second * 30)
 	defer ticker.Stop()
@@ -233,7 +234,7 @@ func (a *AppProxyAdapter) checkPort() {
 				buf := bytes.NewBufferString("")
 				a.WriteLog(buf)
 				a.BootLog = buf.String()
-				a.changeState(StatusRunning)
+				a.changeState(adapter.StatusRunning)
 				return
 			}
 		case <-timeout:
@@ -244,7 +245,7 @@ func (a *AppProxyAdapter) checkPort() {
 	}
 }
 
-func (a *AppProxyAdapter) changeState(state Status) {
+func (a *Adapter) changeState(state adapter.Status) {
 	a.Lock()
 	defer a.Unlock()
 	a.state = state

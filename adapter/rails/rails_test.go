@@ -1,4 +1,4 @@
-package adapters
+package rails
 
 import (
 	"net/http"
@@ -6,13 +6,11 @@ import (
 	"regexp"
 	"testing"
 	"time"
-
-	"github.com/vektra/errors"
 )
 
 func TestRubyRails(t *testing.T) {
 
-	adapter, err := CreateRailsAdapter("rails.test", "./test/rails5.1")
+	adapter, err := New("rails.test", "./test/rails5.1")
 	if err != nil {
 		panic(err)
 	}
@@ -41,6 +39,6 @@ func TestRubyRails(t *testing.T) {
 		t.Errorf("%s: ~ /%s/ = %v, want %v", rr.Body, re, got, match)
 	}
 
-	adapter.Stop(errors.New("test finished"))
-	time.Sleep(1 * time.Second)
+	// adapter.Stop(errors.New("test finished"))
+	// time.Sleep(1 * time.Second)
 }

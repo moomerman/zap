@@ -1,4 +1,4 @@
-package adapters
+package static
 
 import (
 	"io"
@@ -8,37 +8,39 @@ import (
 	"os/exec"
 	"path"
 	"time"
+
+	"github.com/moomerman/zap/adapter"
 )
 
-// StaticAdapter holds the state for the application
-type StaticAdapter struct {
+// Adapter holds the state for the application
+type Adapter struct {
 	Name    string
 	Dir     string
-	State   Status
+	State   adapter.Status
 	BootLog string
 }
 
-// CreateStaticAdapter creates a new static HTML application
-func CreateStaticAdapter(dir string) (Adapter, error) {
-	return &StaticAdapter{
+// New creates a new static HTML application
+func New(dir string) (adapter.Adapter, error) {
+	return &Adapter{
 		Name: "Static",
 		Dir:  dir,
 	}, nil
 }
 
 // Status returns the status of the adapter
-func (d *StaticAdapter) Status() Status {
+func (d *Adapter) Status() adapter.Status {
 	return d.State
 }
 
 // ServeHTTP implements the http.Handler interface
-func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (d *Adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := d.Dir + r.URL.Path
 
 	info, err := os.Stat(filename)
 
 	if err != nil {
-		log.Println("[static]", fullURL(r), "->", 404)
+		log.Println("[static]", adapter.FullURL(r), "->", 404)
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
@@ -47,7 +49,7 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filename = path.Join(filename, "index.html")
 		info, err = os.Stat(filename)
 		if err != nil || info.IsDir() {
-			log.Println("[static]", fullURL(r), "->", 404)
+			log.Println("[static]", adapter.FullURL(r), "->", 404)
 			http.Error(w, "404 Not Found", http.StatusNotFound)
 			return
 		}
@@ -55,30 +57,30 @@ func (d *StaticAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Println("[static]", fullURL(r), "->", 500)
+		log.Println("[static]", adapter.FullURL(r), "->", 500)
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer file.Close()
 
-	log.Println("[static]", fullURL(r), "->", filename)
+	log.Println("[static]", adapter.FullURL(r), "->", filename)
 	http.ServeContent(w, r, filename, time.Now(), file)
 }
 
 // Start doesn't do anything
-func (d *StaticAdapter) Start() error {
-	d.State = StatusRunning
+func (d *Adapter) Start() error {
+	d.State = adapter.StatusRunning
 	return nil
 }
 
 // Stop doesn't do anything
-func (d *StaticAdapter) Stop(reason error) error {
-	d.State = StatusStopped
+func (d *Adapter) Stop(reason error) error {
+	d.State = adapter.StatusStopped
 	return nil
 }
 
 // Command doesn't do anything
-func (d *StaticAdapter) Command() *exec.Cmd { return nil }
+func (d *Adapter) Command() *exec.Cmd { return nil }
 
 // WriteLog doesn't do anything
-func (d *StaticAdapter) WriteLog(w io.Writer) {}
+func (d *Adapter) WriteLog(w io.Writer) {}

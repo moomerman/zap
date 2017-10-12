@@ -1,20 +1,25 @@
-package adapters
+package phoenix
 
-import "regexp"
+import (
+	"regexp"
 
-// CreatePhoenixAdapter creates a new phoenix adapter
-func CreatePhoenixAdapter(host, dir string) (Adapter, error) {
+	"github.com/moomerman/zap/adapter"
+	"github.com/moomerman/zap/adapter/app"
+)
+
+// New creates a new phoenix adapter
+func New(host, dir string) (adapter.Adapter, error) {
 
 	// TODO: look at the mix.exs file and determine which version of phoenix
 	// we're starting and use the correct start command
 	mixFileChanged, nil := regexp.Compile("You must restart your server")
 
-	return &AppProxyAdapter{
+	return &app.Adapter{
 		Name:            "Phoenix",
 		Host:            host,
 		Dir:             dir,
 		RestartPatterns: []*regexp.Regexp{mixFileChanged},
 		EnvPortName:     "PHX_PORT",
-		shellCommand:    "exec mix do deps.get, phx.server # %s %s",
+		ShellCommand:    "exec mix do deps.get, phx.server # %s %s",
 	}, nil
 }

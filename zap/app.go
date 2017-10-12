@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/zap/adapters"
+	"github.com/moomerman/zap/adapter"
+	"github.com/moomerman/zap/adapter/proxy"
 	"github.com/moomerman/zap/ngrok"
 	"github.com/vektra/errors"
 )
@@ -23,7 +24,7 @@ type app struct {
 
 	Config   *AppConfig
 	LastUsed time.Time
-	Adapter  adapters.Adapter
+	Adapter  adapter.Adapter
 	Started  time.Time
 	Ngrok    *ngrok.Tunnel
 }
@@ -43,22 +44,22 @@ func newApp(config *AppConfig) (*app, error) {
 }
 
 func (a *app) newAdapter() error {
-	var adapter adapters.Adapter
+	var adpt adapter.Adapter
 	var err error
 
 	if a.Config.Dir != "" {
-		adapter, err = adapters.GetAdapter(a.Config.Host, a.Config.Dir)
+		adpt, err = GetAdapter(a.Config.Host, a.Config.Dir)
 		if err != nil {
 			return errors.Context(err, "could not determine adapter")
 		}
 	} else {
-		adapter, err = adapters.CreateProxyAdapter(a.Config.Host, a.Config.Content)
+		adpt, err = proxy.New(a.Config.Host, a.Config.Content)
 		if err != nil {
 			return errors.Context(err, "unable to create proxy adapter")
 		}
 	}
 
-	a.Adapter = adapter
+	a.Adapter = adpt
 	return nil
 }
 
