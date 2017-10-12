@@ -2,12 +2,12 @@ package rails
 
 import (
 	"github.com/moomerman/zap/adapter"
-	"github.com/moomerman/zap/adapter/app"
+	"github.com/moomerman/zap/adapter/server"
 )
 
 // New creates a new rails adapter
 func New(host, dir string) (adapter.Adapter, error) {
-	return &app.Adapter{
+	return &server.Adapter{
 		Name:         "Rails",
 		Host:         host,
 		Dir:          dir,

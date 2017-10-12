@@ -1,11 +1,13 @@
 package buffalo
 
-import "github.com/moomerman/zap/adapter"
-import "github.com/moomerman/zap/adapter/app"
+import (
+	"github.com/moomerman/zap/adapter"
+	"github.com/moomerman/zap/adapter/server"
+)
 
 // New creates a new buffalo adapter
 func New(host, dir string) (adapter.Adapter, error) {
-	return &app.Adapter{
+	return &server.Adapter{
 		Name:         "Buffalo",
 		Host:         host,
 		Dir:          dir,
