@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -59,8 +58,8 @@ func main() {
 		httpPort = "Socket"
 		httpsPort = "SocketTLS"
 	} else {
-		httpPort = ":" + strconv.Itoa(*fHTTPPort)
-		httpsPort = ":" + strconv.Itoa(*fHTTPSPort)
+		httpPort = fmt.Sprintf("127.0.0.1:%d", *fHTTPPort)
+		httpsPort = fmt.Sprintf("127.0.0.1:%d", *fHTTPSPort)
 	}
 
 	server := zap.NewServer()
