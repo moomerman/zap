@@ -87,7 +87,7 @@ func templates502Html() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/502.html", size: 48, mode: os.FileMode(420), modTime: time.Unix(1506547646, 0)}
+	info := bindataFileInfo{name: "templates/502.html", size: 48, mode: os.FileMode(420), modTime: time.Unix(1507841707, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -107,7 +107,7 @@ func templatesAppHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/app.html", size: 1361, mode: os.FileMode(420), modTime: time.Unix(1506443944, 0)}
+	info := bindataFileInfo{name: "templates/app.html", size: 1361, mode: os.FileMode(420), modTime: time.Unix(1507841707, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -127,7 +127,7 @@ func templatesLayoutHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/layout.html", size: 396, mode: os.FileMode(420), modTime: time.Unix(1506445492, 0)}
+	info := bindataFileInfo{name: "templates/layout.html", size: 396, mode: os.FileMode(420), modTime: time.Unix(1507841707, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -147,7 +147,7 @@ func templatesLogHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/log.html", size: 1023, mode: os.FileMode(420), modTime: time.Unix(1506449021, 0)}
+	info := bindataFileInfo{name: "templates/log.html", size: 1023, mode: os.FileMode(420), modTime: time.Unix(1507841707, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -167,7 +167,7 @@ func templatesNgrokHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/ngrok.html", size: 271, mode: os.FileMode(420), modTime: time.Unix(1507123507, 0)}
+	info := bindataFileInfo{name: "templates/ngrok.html", size: 271, mode: os.FileMode(420), modTime: time.Unix(1507841707, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
