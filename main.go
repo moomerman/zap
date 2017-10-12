@@ -46,11 +46,11 @@ func main() {
 		return
 	}
 
-	domains := strings.Split(*fDNSDomains, ":")
 	responder := &dns.Responder{
 		Address: fmt.Sprintf("127.0.0.1:%d", *fDNSPort),
+		Domains: strings.Split(*fDNSDomains, ":"),
 	}
-	go responder.Serve(domains)
+	go responder.Serve()
 
 	var httpPort, httpsPort string
 

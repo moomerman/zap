@@ -15,14 +15,15 @@ const DefaultAddress = ":9253"
 // Responder holds the configuration for the DNS server
 type Responder struct {
 	Address string
+	Domains []string
 
 	udpServer *dns.Server
 	tcpServer *dns.Server
 }
 
 // Serve starts the DNS server
-func (d *Responder) Serve(domains []string) error {
-	for _, domain := range domains {
+func (d *Responder) Serve() error {
+	for _, domain := range d.Domains {
 		dns.HandleFunc(domain+".", d.handleDNS)
 	}
 
