@@ -14,14 +14,35 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/zap/adapter"
+	zadapter "github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/proxy"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
 
-// Adapter holds the state for the application
-type Adapter struct {
+// Config holds the server configuration
+type Config struct {
+	Name            string
+	Host            string
+	Dir             string
+	EnvPortName     string
+	ShellCommand    string
+	RestartPatterns []*regexp.Regexp
+}
+
+// New returns a new server adapter
+func New(config *Config) zadapter.Adapter {
+	return &adapter{
+		Name:            config.Name,
+		Host:            config.Host,
+		Dir:             config.Dir,
+		EnvPortName:     config.EnvPortName,
+		ShellCommand:    config.ShellCommand,
+		RestartPatterns: config.RestartPatterns,
+	}
+}
+
+type adapter struct {
 	sync.Mutex
 
 	Name            string
@@ -35,7 +56,7 @@ type Adapter struct {
 	Pid             int
 	ShellCommand    string
 
-	state      adapter.Status
+	state      zadapter.Status
 	cmd        *exec.Cmd
 	proxy      *proxy.MultiProxy
 	stdout     io.Reader
@@ -44,10 +65,10 @@ type Adapter struct {
 }
 
 // Start starts the application
-func (a *Adapter) Start() error {
+func (a *adapter) Start() error {
 	a.Lock()
 	defer a.Unlock()
-	if a.state == adapter.StatusStopping || a.state == adapter.StatusRunning {
+	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusRunning {
 		return nil
 	}
 
@@ -56,10 +77,10 @@ func (a *Adapter) Start() error {
 }
 
 // Stop stops the application
-func (a *Adapter) Stop(reason error) error {
+func (a *adapter) Stop(reason error) error {
 	a.Lock()
 	defer a.Unlock()
-	if a.state == adapter.StatusStopping || a.state == adapter.StatusStopped {
+	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusStopped {
 		return nil
 	}
 
@@ -68,28 +89,30 @@ func (a *Adapter) Stop(reason error) error {
 }
 
 // Status returns the status of the adapter
-func (a *Adapter) Status() adapter.Status {
+func (a *adapter) Status() zadapter.Status {
 	a.Lock()
 	defer a.Unlock()
 	return a.state
 }
 
 // WriteLog writes the log to the given writer
-func (a *Adapter) WriteLog(w io.Writer) {
+func (a *adapter) WriteLog(w io.Writer) {
 	a.log.WriteTo(w)
 }
 
 // ServeHTTP implements the http.Handler interface
-func (a *Adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("[proxy]", adapter.FullURL(r), "->", a.proxy.URL)
+func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("[proxy]", zadapter.FullURL(r), "->", a.proxy.URL)
 	a.proxy.Proxy(w, r)
 }
 
-func (a *Adapter) start() error {
-	a.state = adapter.StatusStarting
+// -- PRIVATE --
+
+func (a *adapter) start() error {
+	a.state = zadapter.StatusStarting
 	a.cancelChan = make(chan struct{})
 
-	port, err := adapter.FindAvailablePort()
+	port, err := zadapter.FindAvailablePort()
 	if err != nil {
 		e := errors.Context(err, "couldn't find available port")
 		a.error(e)
@@ -116,8 +139,8 @@ func (a *Adapter) start() error {
 	return nil
 }
 
-func (a *Adapter) stop() error {
-	a.state = adapter.StatusStopping
+func (a *adapter) stop() error {
+	a.state = zadapter.StatusStopping
 	close(a.cancelChan)
 
 	err := a.cmd.Process.Kill()
@@ -129,14 +152,14 @@ func (a *Adapter) stop() error {
 	a.cmd.Wait()
 
 	log.Println("[app]", a.Host, "shutdown and cleaned up")
-	a.changeState(adapter.StatusStopped)
+	a.changeState(zadapter.StatusStopped)
 	a.Pid = 0
 
 	return nil
 }
 
-func (a *Adapter) error(err error) error {
-	if a.state == adapter.StatusStopping || a.state == adapter.StatusStopped {
+func (a *adapter) error(err error) error {
+	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusStopped {
 		return nil
 	}
 
@@ -146,11 +169,11 @@ func (a *Adapter) error(err error) error {
 		return err
 	}
 
-	a.changeState(adapter.StatusError)
+	a.changeState(zadapter.StatusError)
 	return nil
 }
 
-func (a *Adapter) startApplication(command string) error {
+func (a *adapter) startApplication(command string) error {
 	shell := os.Getenv("SHELL")
 
 	command = fmt.Sprintf(command, a.Port, a.Host)
@@ -181,7 +204,7 @@ func (a *Adapter) startApplication(command string) error {
 	return nil
 }
 
-func (a *Adapter) tail() {
+func (a *adapter) tail() {
 	c := make(chan error)
 
 	go func() {
@@ -217,7 +240,7 @@ func (a *Adapter) tail() {
 
 }
 
-func (a *Adapter) checkPort() {
+func (a *adapter) checkPort() {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	timeout := time.After(time.Second * 30)
 	defer ticker.Stop()
@@ -234,7 +257,7 @@ func (a *Adapter) checkPort() {
 				buf := bytes.NewBufferString("")
 				a.WriteLog(buf)
 				a.BootLog = buf.String()
-				a.changeState(adapter.StatusRunning)
+				a.changeState(zadapter.StatusRunning)
 				return
 			}
 		case <-timeout:
@@ -245,7 +268,7 @@ func (a *Adapter) checkPort() {
 	}
 }
 
-func (a *Adapter) changeState(state adapter.Status) {
+func (a *adapter) changeState(state zadapter.Status) {
 	a.Lock()
 	defer a.Unlock()
 	a.state = state

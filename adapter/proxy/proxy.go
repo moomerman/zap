@@ -6,32 +6,31 @@ import (
 	"net/http"
 	"os/exec"
 
-	"github.com/moomerman/zap/adapter"
+	zadapter "github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/proxy"
 )
 
-// Adapter holds the state for the application
-type Adapter struct {
-	Name    string
-	Host    string
-	Proxy   string
-	proxy   *proxy.MultiProxy
-	State   adapter.Status
-	BootLog string
-}
-
 // New creates a new proxy
-func New(host, proxy string) (adapter.Adapter, error) {
-	return &Adapter{
+func New(host, proxy string) (zadapter.Adapter, error) {
+	return &adapter{
 		Name:  "Proxy",
 		Host:  host,
 		Proxy: proxy,
 	}, nil
 }
 
+type adapter struct {
+	Name    string
+	Host    string
+	Proxy   string
+	proxy   *proxy.MultiProxy
+	State   zadapter.Status
+	BootLog string
+}
+
 // Start starts the proxy
-func (a *Adapter) Start() error {
-	a.State = adapter.StatusStarting
+func (a *adapter) Start() error {
+	a.State = zadapter.StatusStarting
 	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
 	proxy, err := proxy.NewProxy(a.Proxy, a.Host)
 	if err != nil {
@@ -39,26 +38,26 @@ func (a *Adapter) Start() error {
 	}
 
 	a.proxy = proxy
-	a.State = adapter.StatusRunning
+	a.State = zadapter.StatusRunning
 	return nil
 }
 
 // Status returns the status of the proxy
-func (a *Adapter) Status() adapter.Status {
+func (a *adapter) Status() zadapter.Status {
 	return a.State
 }
 
 // ServeHTTP implements the http.Handler interface
-func (a *Adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("[proxy]", adapter.FullURL(r), "->", a.proxy.URL)
+func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("[proxy]", zadapter.FullURL(r), "->", a.proxy.URL)
 	a.proxy.Proxy(w, r)
 }
 
 // Stop stops the adapter
-func (a *Adapter) Stop(reason error) error { return nil }
+func (a *adapter) Stop(reason error) error { return nil }
 
 // Command doesn't do anything
-func (a *Adapter) Command() *exec.Cmd { return nil }
+func (a *adapter) Command() *exec.Cmd { return nil }
 
 // WriteLog doesn't do anything
-func (a *Adapter) WriteLog(w io.Writer) {}
+func (a *adapter) WriteLog(w io.Writer) {}

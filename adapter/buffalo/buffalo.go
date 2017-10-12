@@ -5,13 +5,15 @@ import (
 	"github.com/moomerman/zap/adapter/server"
 )
 
-// New creates a new buffalo adapter
-func New(host, dir string) (adapter.Adapter, error) {
-	return &server.Adapter{
+// New creates a new adapter
+func New(host, dir string) adapter.Adapter {
+	config := &server.Config{
 		Name:         "Buffalo",
 		Host:         host,
 		Dir:          dir,
 		EnvPortName:  "PORT",
 		ShellCommand: "exec buffalo dev # %s %s",
-	}, nil
+	}
+
+	return server.New(config)
 }
