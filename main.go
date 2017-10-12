@@ -4,8 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/moomerman/zap/cert"
 	"github.com/moomerman/zap/dns"
@@ -28,12 +31,12 @@ func main() {
 	if *fInstall {
 		err := cert.CreateCert()
 		if err != nil {
-			log.Fatal("Unable to install self-signed certificate", err)
+			log.Fatal("[zap] unable to install self-signed certificate", err)
 		}
 
 		err = zap.Install(*fHTTPPort, *fHTTPSPort)
 		if err != nil {
-			log.Fatal("Unable to install daemon", err)
+			log.Fatal("[zap] unable to install daemon", err)
 		}
 
 		return
@@ -48,7 +51,6 @@ func main() {
 	responder := &dns.Responder{
 		Address: fmt.Sprintf("127.0.0.1:%d", *fDNSPort),
 	}
-	log.Println("[dns]", "server running at", responder.Address)
 	go responder.Serve(domains)
 
 	var httpPort, httpsPort string
@@ -64,5 +66,12 @@ func main() {
 	server := zap.NewServer()
 
 	go server.Serve(httpPort)
-	server.ServeTLS(httpsPort)
+	go server.ServeTLS(httpsPort)
+
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+
+	log.Println("[zap] shutting down", <-ch)
+	responder.Stop()
+	server.Stop()
 }

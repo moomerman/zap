@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -14,6 +15,9 @@ const DefaultAddress = ":9253"
 // Responder holds the configuration for the DNS server
 type Responder struct {
 	Address string
+
+	udpServer *dns.Server
+	tcpServer *dns.Server
 }
 
 // Serve starts the DNS server
@@ -33,19 +37,29 @@ func (d *Responder) Serve(domains []string) error {
 
 	go func() {
 		defer wg.Done()
-		server := &dns.Server{Addr: addr, Net: "udp", TsigSecret: nil}
-		server.ListenAndServe()
+		d.udpServer = &dns.Server{Addr: addr, Net: "udp", TsigSecret: nil}
+		d.udpServer.ListenAndServe()
 	}()
 
 	go func() {
 		defer wg.Done()
-		server := &dns.Server{Addr: addr, Net: "tcp", TsigSecret: nil}
-		server.ListenAndServe()
+		d.tcpServer = &dns.Server{Addr: addr, Net: "tcp", TsigSecret: nil}
+		d.tcpServer.ListenAndServe()
 	}()
+
+	log.Println("[dns]", "listening at", addr)
 
 	wg.Wait()
 
+	log.Println("[dns] server stopped")
+
 	return nil
+}
+
+// Stop stops the DNS servers
+func (d *Responder) Stop() {
+	d.udpServer.Shutdown()
+	d.tcpServer.Shutdown()
 }
 
 func (d *Responder) handleDNS(w dns.ResponseWriter, r *dns.Msg) {

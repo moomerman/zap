@@ -1,10 +1,12 @@
 package zap
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/moomerman/zap/cert"
 	"github.com/puma/puma-dev/dev/launch"
@@ -32,13 +34,14 @@ func (s *Server) ServeTLS(bind string) {
 		if err != nil {
 			log.Fatal("unable to get launchd socket listener", err)
 		}
-
+		log.Println("[zap] https listening at", "SocketTLS (launchd)")
 		s.https.Serve(tls.NewListener(listeners[0], s.https.TLSConfig))
 	} else {
 		listener, err := tls.Listen("tcp", bind, s.https.TLSConfig)
 		if err != nil {
 			log.Fatal("unable to create tls listener", err)
 		}
+		log.Println("[zap] https listening at", bind)
 		s.https.Serve(listener)
 	}
 }
@@ -50,14 +53,25 @@ func (s *Server) Serve(bind string) {
 		if err != nil {
 			log.Fatal("unable to get launchd socket listener", err)
 		}
+		log.Println("[zap] http listening at", "Socket (launchd)")
 		s.http.Serve(listeners[0])
 	} else {
 		listener, err := net.Listen("tcp", bind)
 		if err != nil {
 			log.Fatal("unable to create listener", err)
 		}
+		log.Println("[zap] http listening at", bind)
 		s.http.Serve(listener)
 	}
+}
+
+// Stop gracefully stops the HTTP and HTTPS servers
+func (s *Server) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	s.http.Shutdown(ctx)
+	s.https.Shutdown(ctx)
 }
 
 func createHTTPSServer() *http.Server {
