@@ -42,7 +42,7 @@ func main() {
 		Address: *fDNS,
 		Domains: strings.Split(*fDNSDomains, ":"),
 	}
-	go responder.Serve()
+	responder.Serve()
 
 	server := &zap.Server{
 		HTTPAddr:  *fHTTP,

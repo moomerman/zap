@@ -21,7 +21,7 @@ type Responder struct {
 }
 
 // Serve starts the DNS server
-func (d *Responder) Serve() error {
+func (d *Responder) Serve() {
 	for _, domain := range d.Domains {
 		dns.HandleFunc(domain+".", d.handleDNS)
 	}
@@ -44,8 +44,6 @@ func (d *Responder) Serve() error {
 	}()
 
 	log.Println("[dns]", "listening at udp/tcp", addr)
-
-	return nil
 }
 
 // Stop stops the DNS servers
