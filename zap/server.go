@@ -93,7 +93,7 @@ func (s *Server) serveHTTPS() error {
 
 func createHTTPServer() *http.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", findAppHandler(appHandler()))
+	mux.HandleFunc("/", findAppHandler(appHandler))
 
 	return &http.Server{
 		Handler: mux,
@@ -104,15 +104,15 @@ func createHTTPSServer() *http.Server {
 	mux := http.NewServeMux()
 	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
 	// Maybe have a zapHandler that checks for localhost and then delegates requests
-	mux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler()))
-	mux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler()))
-	mux.HandleFunc("/zap/api/apps", appsAPIHandler())
-	mux.HandleFunc("/zap/ngrok/start", findAppHandler(startNgrokHandler()))
-	mux.HandleFunc("/zap/ngrok", findAppHandler(ngrokHandler()))
-	mux.HandleFunc("/zap/log", findAppHandler(logHandler()))
-	mux.HandleFunc("/zap/restart", findAppHandler(restartHandler()))
-	mux.HandleFunc("/zap", findAppHandler(statusHandler()))
-	mux.HandleFunc("/", findAppHandler(appHandler()))
+	mux.HandleFunc("/zap/api/apps", appsAPIHandler)
+	mux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler))
+	mux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler))
+	mux.HandleFunc("/zap/ngrok/start", findAppHandler(startNgrokHandler))
+	mux.HandleFunc("/zap/ngrok", findAppHandler(ngrokHandler))
+	mux.HandleFunc("/zap/log", findAppHandler(logHandler))
+	mux.HandleFunc("/zap/restart", findAppHandler(restartHandler))
+	mux.HandleFunc("/zap", findAppHandler(statusHandler))
+	mux.HandleFunc("/", findAppHandler(appHandler))
 
 	cache, err := cert.NewCache()
 	if err != nil {

@@ -37,112 +37,93 @@ func findAppHandler(next http.HandlerFunc) http.HandlerFunc {
 
 // ZAP HANDLERS
 
-func appHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
+func appHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
 
-		switch app.Status() {
-		case "running":
-			app.ServeHTTP(w, r)
-		default:
-			renderer.HTML(w, http.StatusAccepted, "app", app)
-		}
+	switch app.Status() {
+	case "running":
+		app.ServeHTTP(w, r)
+	default:
+		renderer.HTML(w, http.StatusAccepted, "app", app)
 	}
 }
 
-func statusHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
-		renderer.HTML(w, http.StatusOK, "app", app)
-	}
+func statusHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
+	renderer.HTML(w, http.StatusOK, "app", app)
 }
 
-func logHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
-		renderer.HTML(w, http.StatusOK, "log", app)
-	}
+func logHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
+	renderer.HTML(w, http.StatusOK, "log", app)
 }
 
-func restartHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
+func restartHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
 
-		if err := app.RestartAdapter(); err != nil {
-			log.Println("[app]", app.Config.Host, "internal server error", err)
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		}
-
-		http.Redirect(w, r, "/zap", http.StatusTemporaryRedirect)
+	if err := app.RestartAdapter(); err != nil {
+		log.Println("[app]", app.Config.Host, "internal server error", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 	}
+
+	http.Redirect(w, r, "/zap", http.StatusTemporaryRedirect)
 }
 
-func logAPIHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
+func logAPIHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
 
-		app.WriteLog(w)
-	}
+	app.WriteLog(w)
 }
 
 // NGROK HANDLERS
 
-func ngrokHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
+func ngrokHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
 
-		renderer.HTML(w, http.StatusOK, "ngrok", app)
-	}
+	renderer.HTML(w, http.StatusOK, "ngrok", app)
 }
 
-func startNgrokHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
+func startNgrokHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
 
-		if err := app.StartNgrok(r.Host, 80); err != nil {
-			log.Println("[app]", app.Config.Host, "internal server error", err)
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		}
-
-		http.Redirect(w, r, "/zap/ngrok", http.StatusTemporaryRedirect)
+	if err := app.StartNgrok(r.Host, 80); err != nil {
+		log.Println("[app]", app.Config.Host, "internal server error", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 	}
+
+	http.Redirect(w, r, "/zap/ngrok", http.StatusTemporaryRedirect)
 }
 
 // API HANDLERS
 
-func stateAPIHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		app := r.Context().Value(appKey).(*app)
+func stateAPIHandler(w http.ResponseWriter, r *http.Request) {
+	app := r.Context().Value(appKey).(*app)
 
-		content, err := json.MarshalIndent(map[string]interface{}{
-			"app":    app,
-			"uptime": time.Since(app.Started).String(),
-			"status": app.Status(),
-		}, "", "  ")
-		if err != nil {
-			log.Println("[app]", app.Config.Host, "internal server error", err)
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(content)
+	content, err := json.MarshalIndent(map[string]interface{}{
+		"app":    app,
+		"uptime": time.Since(app.Started).String(),
+		"status": app.Status(),
+	}, "", "  ")
+	if err != nil {
+		log.Println("[app]", app.Config.Host, "internal server error", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(content)
 }
 
-func appsAPIHandler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		content, err := json.MarshalIndent(map[string]interface{}{
-			"apps": apps,
-		}, "", "  ")
-		if err != nil {
-			log.Println("[app]", "internal server error", err)
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(content)
+func appsAPIHandler(w http.ResponseWriter, r *http.Request) {
+	content, err := json.MarshalIndent(map[string]interface{}{
+		"apps": apps,
+	}, "", "  ")
+	if err != nil {
+		log.Println("[app]", "internal server error", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(content)
 }
