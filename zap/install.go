@@ -6,7 +6,7 @@ const appID = "com.github.moomerman.zap"
 const appName = "zapd"
 
 // Install installs zap
-func Install(httpPort, httpsPort, dnsPort int) error {
+func Install(httpAddr, httpsAddr, dnsAddr string) error {
 
 	// TODO: install the dns resolver
 
@@ -14,7 +14,7 @@ func Install(httpPort, httpsPort, dnsPort int) error {
 		return err
 	}
 
-	return installService(httpPort, httpsPort)
+	return installService(httpAddr, httpsAddr)
 }
 
 // Uninstall removes zap

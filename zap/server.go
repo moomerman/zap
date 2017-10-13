@@ -15,27 +15,38 @@ import (
 
 // Server holds the state for the HTTP and HTTPS servers
 type Server struct {
+	HTTPAddr  string
+	HTTPSAddr string
+
 	http  *http.Server
 	https *http.Server
 }
 
 // NewServer creates the HTTP and HTTPS servers
-func NewServer() *Server {
-	return &Server{
-		http:  createHTTPServer(),
-		https: createHTTPSServer(),
-	}
+// func NewServer() *Server {
+// 	return &Server{
+// 		http:  createHTTPServer(),
+// 		https: createHTTPSServer(),
+// 	}
+// }
+
+// Serve starts the HTTP servers
+func (s *Server) Serve() {
+	s.http = createHTTPServer()
+	s.https = createHTTPSServer()
+
+	go s.serveHTTP()
+	go s.serveHTTPS()
 }
 
-// ServeTLS starts the HTTPS server
-func (s *Server) ServeTLS(bind string) {
+func (s *Server) serveHTTPS() {
 	var listener net.Listener
 	var err error
 
-	if bind == "SocketTLS" {
-		listener = tls.NewListener(getSocketListener(bind), s.https.TLSConfig)
+	if s.HTTPSAddr == "SocketTLS" {
+		listener = tls.NewListener(getSocketListener(s.HTTPSAddr), s.https.TLSConfig)
 	} else {
-		listener, err = tls.Listen("tcp", bind, s.https.TLSConfig)
+		listener, err = tls.Listen("tcp", s.HTTPSAddr, s.https.TLSConfig)
 		if err != nil {
 			log.Fatal("unable to create tls listener", err)
 		}
@@ -45,15 +56,14 @@ func (s *Server) ServeTLS(bind string) {
 	s.https.Serve(listener)
 }
 
-// Serve starts the HTTP server
-func (s *Server) Serve(bind string) {
+func (s *Server) serveHTTP() {
 	var listener net.Listener
 	var err error
 
-	if bind == "Socket" {
-		listener = getSocketListener(bind)
+	if s.HTTPAddr == "Socket" {
+		listener = getSocketListener(s.HTTPAddr)
 	} else {
-		listener, err = net.Listen("tcp", bind)
+		listener, err = net.Listen("tcp", s.HTTPAddr)
 		if err != nil {
 			log.Fatal("unable to create listener", err)
 		}

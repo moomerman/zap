@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -35,6 +36,11 @@ func CreateCert() error {
 
 	keyPath := filepath.Join(dir, "key.pem")
 	certPath := filepath.Join(dir, "cert.pem")
+
+	if _, err := os.Stat(keyPath); !os.IsNotExist(err) {
+		log.Println("[cert] private key exists, skipping install", keyPath)
+		return nil
+	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

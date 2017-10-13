@@ -12,7 +12,9 @@ import (
 )
 
 // Install installs the launch agent on macOS
-func Install(appID, appName string, httpPort, tlsPort int) error {
+func Install(appID, appName, httpHost, httpPort, tlsHost, tlsPort string) error {
+	Uninstall(appID, appName)
+
 	binPath, err := osext.Executable()
 	if err != nil {
 		return errors.Context(err, "calculating executable path")
@@ -30,6 +32,8 @@ func Install(appID, appName string, httpPort, tlsPort int) error {
    <array>
 	     <string>%s</string>
 			 <string>-launchd</string>
+			 <string>-http=Socket</string>
+			 <string>-https=SocketTLS</string>
    </array>
    <key>KeepAlive</key>
    <true/>
@@ -40,16 +44,16 @@ func Install(appID, appName string, httpPort, tlsPort int) error {
        <key>Socket</key>
        <dict>
            <key>SockNodeName</key>
-           <string>127.0.0.1</string>
+           <string>%s</string>
            <key>SockServiceName</key>
-           <string>%d</string>
+           <string>%s</string>
        </dict>
        <key>SocketTLS</key>
        <dict>
            <key>SockNodeName</key>
-           <string>127.0.0.1</string>
+           <string>%s</string>
            <key>SockServiceName</key>
-           <string>%d</string>
+           <string>%s</string>
        </dict>
    </dict>
    <key>StandardOutPath</key>
@@ -64,7 +68,7 @@ func Install(appID, appName string, httpPort, tlsPort int) error {
 	plistDir := homedir.MustExpand("~/Library/LaunchAgents")
 	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appID + ".plist")
 
-	config := []byte(fmt.Sprintf(userTemplate, appName, binPath, httpPort, tlsPort, logPath, logPath))
+	config := []byte(fmt.Sprintf(userTemplate, appName, binPath, httpHost, httpPort, tlsHost, tlsPort, logPath, logPath))
 
 	if err := os.MkdirAll(plistDir, 0644); err != nil {
 		return errors.Context(err, "creating LaunchAgents directory")
@@ -80,14 +84,14 @@ func Install(appID, appName string, httpPort, tlsPort int) error {
 		return errors.Context(err, "launchctl load <plist>")
 	}
 
-	fmt.Printf("* Installed %s on ports: http %d, https %d\n", appID, httpPort, tlsPort)
+	fmt.Printf("* Installed %s on ports: http %s, https %s\n", appID, httpPort, tlsPort)
 
 	return nil
 }
 
 // Uninstall removes the launch agent on macOS
 func Uninstall(appID, appName string) error {
-	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appName + ".plist")
+	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appID + ".plist")
 
 	if err := exec.Command("launchctl", "unload", plist).Run(); err != nil {
 		return errors.Context(err, "launchctl unload <plist>")

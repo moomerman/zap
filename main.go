@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -17,9 +16,9 @@ var (
 	fInstall    = flag.Bool("install", false, "Install the server")
 	fUninstall  = flag.Bool("uninstall", false, "Uninstall the server")
 	fLaunchd    = flag.Bool("launchd", false, "Server is running via launchd")
-	fHTTPPort   = flag.Int("http-port", 80, "port to listen on for HTTP requests")
-	fHTTPSPort  = flag.Int("https-port", 443, "port to listen on for HTTPS requests")
-	fDNSPort    = flag.Int("dns-port", 9253, "port to listen on for DNS requests")
+	fHTTP       = flag.String("http", "127.0.0.1:80", "address to listen on for HTTP requests")
+	fHTTPS      = flag.String("https", "127.0.0.1:443", "address to listen on for HTTPS requests")
+	fDNS        = flag.String("dns", "127.0.0.1:9253", "address to listen on for DNS requests")
 	fDNSDomains = flag.String("domains", "dev:test", "domains to handle for DNS requests, separate with :")
 )
 
@@ -27,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *fInstall {
-		if err := zap.Install(*fHTTPPort, *fHTTPSPort, *fDNSPort); err != nil {
+		if err := zap.Install(*fHTTP, *fHTTPS, *fDNS); err != nil {
 			log.Fatal("[zap] unable to install zap", err)
 		}
 		return
@@ -41,25 +40,16 @@ func main() {
 	}
 
 	responder := &dns.Responder{
-		Address: fmt.Sprintf("127.0.0.1:%d", *fDNSPort),
+		Address: *fDNS,
 		Domains: strings.Split(*fDNSDomains, ":"),
 	}
 	go responder.Serve()
 
-	var httpPort, httpsPort string
-
-	if *fLaunchd {
-		httpPort = "Socket"
-		httpsPort = "SocketTLS"
-	} else {
-		httpPort = fmt.Sprintf("127.0.0.1:%d", *fHTTPPort)
-		httpsPort = fmt.Sprintf("127.0.0.1:%d", *fHTTPSPort)
+	server := &zap.Server{
+		HTTPAddr:  *fHTTP,
+		HTTPSAddr: *fHTTPS,
 	}
-
-	server := zap.NewServer()
-
-	go server.Serve(httpPort)
-	go server.ServeTLS(httpsPort)
+	go server.Serve()
 
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
