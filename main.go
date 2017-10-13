@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/moomerman/zap/dns"
@@ -42,18 +43,33 @@ func main() {
 		Address: *fDNS,
 		Domains: strings.Split(*fDNSDomains, ":"),
 	}
-	responder.Serve()
 
 	server := &zap.Server{
 		HTTPAddr:  *fHTTP,
 		HTTPSAddr: *fHTTPS,
 	}
-	server.Serve()
 
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		ch := make(chan os.Signal)
+		signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
 
-	log.Println("[zap] shutting down", <-ch)
-	responder.Stop()
-	server.Stop()
+		log.Printf("[zap] caught signal '%v' shutting down\n", <-ch)
+		responder.Stop()
+		server.Stop()
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		responder.Serve()
+	}()
+
+	go func() {
+		defer wg.Done()
+		server.Serve()
+	}()
+
+	wg.Wait()
 }

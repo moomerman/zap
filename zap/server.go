@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/moomerman/zap/cert"
@@ -27,15 +28,24 @@ func (s *Server) Serve() {
 	s.http = createHTTPServer()
 	s.https = createHTTPSServer()
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	go func() {
-		err := s.serveHTTP()
-		log.Println("[zap] http server stopped", err)
+		defer wg.Done()
+		if err := s.serveHTTP(); err != http.ErrServerClosed {
+			log.Println("[zap] http server stopped unexpectedly", err)
+		}
 	}()
 
 	go func() {
-		err := s.serveHTTPS()
-		log.Println("[zap] https server stopped", err)
+		defer wg.Done()
+		if err := s.serveHTTPS(); err != http.ErrServerClosed {
+			log.Println("[zap] https server stopped unexpectedly", err)
+		}
 	}()
+
+	wg.Wait()
 }
 
 // Stop gracefully stops the HTTP and HTTPS servers
