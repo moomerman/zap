@@ -9,7 +9,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/moomerman/zap/cert"
 	"github.com/moomerman/zap/dns"
 	"github.com/moomerman/zap/zap"
 )
@@ -28,21 +27,16 @@ func main() {
 	flag.Parse()
 
 	if *fInstall {
-		err := cert.CreateCert()
-		if err != nil {
-			log.Fatal("[zap] unable to install self-signed certificate", err)
+		if err := zap.Install(*fHTTPPort, *fHTTPSPort, *fDNSPort); err != nil {
+			log.Fatal("[zap] unable to install zap", err)
 		}
-
-		err = zap.Install(*fHTTPPort, *fHTTPSPort)
-		if err != nil {
-			log.Fatal("[zap] unable to install daemon", err)
-		}
-
 		return
 	}
 
 	if *fUninstall {
-		zap.Uninstall()
+		if err := zap.Uninstall(); err != nil {
+			log.Fatal("[zap] unable to uninstall zap", err)
+		}
 		return
 	}
 
