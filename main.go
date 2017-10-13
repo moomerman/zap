@@ -15,7 +15,6 @@ import (
 var (
 	fInstall    = flag.Bool("install", false, "Install the server")
 	fUninstall  = flag.Bool("uninstall", false, "Uninstall the server")
-	fLaunchd    = flag.Bool("launchd", false, "Server is running via launchd")
 	fHTTP       = flag.String("http", "127.0.0.1:80", "address to listen on for HTTP requests")
 	fHTTPS      = flag.String("https", "127.0.0.1:443", "address to listen on for HTTPS requests")
 	fDNS        = flag.String("dns", "127.0.0.1:9253", "address to listen on for DNS requests")

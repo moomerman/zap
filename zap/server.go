@@ -48,7 +48,7 @@ func (s *Server) serveHTTPS() {
 	} else {
 		listener, err = tls.Listen("tcp", s.HTTPSAddr, s.https.TLSConfig)
 		if err != nil {
-			log.Fatal("unable to create tls listener", err)
+			log.Fatal("[zap] unable to create tls listener", err)
 		}
 	}
 
@@ -65,7 +65,7 @@ func (s *Server) serveHTTP() {
 	} else {
 		listener, err = net.Listen("tcp", s.HTTPAddr)
 		if err != nil {
-			log.Fatal("unable to create listener", err)
+			log.Fatal("[zap] unable to create listener", err)
 		}
 	}
 
@@ -98,7 +98,7 @@ func createHTTPSServer() *http.Server {
 
 	cache, err := cert.NewCache()
 	if err != nil {
-		log.Fatal("unable to create new cert cache", err)
+		log.Fatal("[zap] unable to create new cert cache", err)
 	}
 
 	tlsConfig := &tls.Config{
@@ -126,7 +126,7 @@ func createHTTPServer() *http.Server {
 func getSocketListener(socket string) net.Listener {
 	listeners, err := launch.SocketListeners(socket)
 	if err != nil {
-		log.Fatal("unable to get launchd socket listener", err)
+		log.Fatal("[zap] unable to get launchd socket listener", err)
 	}
 	return listeners[0]
 }

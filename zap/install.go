@@ -7,8 +7,7 @@ const appName = "zapd"
 
 // Install installs zap
 func Install(httpAddr, httpsAddr, dnsAddr string) error {
-
-	// TODO: install the dns resolver
+	// TODO: install the DNS resolver
 
 	if err := installCertificate(); err != nil {
 		return err
@@ -19,6 +18,8 @@ func Install(httpAddr, httpsAddr, dnsAddr string) error {
 
 // Uninstall removes zap
 func Uninstall() error {
+	// TODO: uninstall the certificate?
+	// TODO: uninstall the DNS resolver
 	return uninstallService()
 }
 

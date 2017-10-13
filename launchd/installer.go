@@ -31,7 +31,6 @@ func Install(appID, appName, httpHost, httpPort, tlsHost, tlsPort string) error 
    <key>ProgramArguments</key>
    <array>
 	     <string>%s</string>
-			 <string>-launchd</string>
 			 <string>-http=Socket</string>
 			 <string>-https=SocketTLS</string>
    </array>
