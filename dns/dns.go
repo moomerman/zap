@@ -3,7 +3,6 @@ package dns
 import (
 	"log"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -32,35 +31,31 @@ func (d *Responder) Serve() error {
 		addr = DefaultAddress
 	}
 
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
 	go func() {
-		defer wg.Done()
 		d.udpServer = &dns.Server{Addr: addr, Net: "udp", TsigSecret: nil}
-		d.udpServer.ListenAndServe()
+		err := d.udpServer.ListenAndServe()
+		log.Println("[dns]", "udp server stopped", err)
 	}()
 
 	go func() {
-		defer wg.Done()
 		d.tcpServer = &dns.Server{Addr: addr, Net: "tcp", TsigSecret: nil}
-		d.tcpServer.ListenAndServe()
+		err := d.tcpServer.ListenAndServe()
+		log.Println("[dns]", "tcp server stopped", err)
 	}()
 
-	log.Println("[dns]", "listening at", addr)
-
-	wg.Wait()
-
-	log.Println("[dns] server stopped")
+	log.Println("[dns]", "listening at udp/tcp", addr)
 
 	return nil
 }
 
 // Stop stops the DNS servers
 func (d *Responder) Stop() {
-	d.udpServer.Shutdown()
-	d.tcpServer.Shutdown()
+	if err := d.udpServer.Shutdown(); err != nil {
+		log.Println("[dns] error shutting down UDP server")
+	}
+	if err := d.tcpServer.Shutdown(); err != nil {
+		log.Println("[dns] error shutting down TCP server")
+	}
 }
 
 func (d *Responder) handleDNS(w dns.ResponseWriter, r *dns.Msg) {

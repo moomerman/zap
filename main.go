@@ -48,7 +48,7 @@ func main() {
 		HTTPAddr:  *fHTTP,
 		HTTPSAddr: *fHTTPS,
 	}
-	go server.Serve()
+	server.Serve()
 
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
