@@ -17,19 +17,19 @@
   branch = "master"
   name = "github.com/miekg/dns"
   packages = [".","internal/socket"]
-  revision = "822ae18e7187e1bbde923a37081f6c1b8e9ba68a"
+  revision = "9fc4eb252eedf0ef8adc05169ce35da5e31beaba"
 
 [[projects]]
-  branch = "master"
   name = "github.com/puma/puma-dev"
   packages = ["dev/launch","homedir","linebuffer"]
   revision = "5c92d487b83a50c44dc8864bbe8952328268a7cf"
+  version = "0.11"
 
 [[projects]]
   branch = "master"
   name = "github.com/unrolled/render"
   packages = ["."]
-  revision = "32bf1ea2a39e4e796d9040b5cf235258cee978c1"
+  revision = "65450fb6b2d3595beca39f969c411db8f8d5c806"
 
 [[projects]]
   branch = "master"
@@ -47,13 +47,13 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["http2","http2/hpack","idna","lex/httplex"]
-  revision = "4b14673ba32bee7f5ac0f990a48f033919fd418b"
+  revision = "9dfe39835686865bff950a07b394c12a98ddc811"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "6eab0e8f74e86c598ec3b6fad4888e0c11482d48"
+  revision = "88f656faf3f37f690df1a32515b479415e1a6769"
 
 [solve-meta]
   analyzer-name = "dep"
