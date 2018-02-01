@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os/exec"
 
+	"github.com/moomerman/go-lib/rproxy"
 	zadapter "github.com/moomerman/zap/adapter"
-	"github.com/moomerman/zap/proxy"
 )
 
 // New creates a new proxy
@@ -23,7 +23,7 @@ type adapter struct {
 	Name    string
 	Host    string
 	Proxy   string
-	proxy   *proxy.MultiProxy
+	proxy   *rproxy.ReverseProxy
 	State   zadapter.Status
 	BootLog string
 }
@@ -32,7 +32,7 @@ type adapter struct {
 func (a *adapter) Start() error {
 	a.State = zadapter.StatusStarting
 	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
-	proxy, err := proxy.NewProxy(a.Proxy, a.Host)
+	proxy, err := rproxy.New(a.Proxy, a.Host)
 	if err != nil {
 		return err
 	}

@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moomerman/go-lib/rproxy"
 	zadapter "github.com/moomerman/zap/adapter"
-	"github.com/moomerman/zap/proxy"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
@@ -58,7 +58,7 @@ type adapter struct {
 
 	state      zadapter.Status
 	cmd        *exec.Cmd
-	proxy      *proxy.MultiProxy
+	proxy      *rproxy.ReverseProxy
 	stdout     io.Reader
 	log        linebuffer.LineBuffer
 	cancelChan chan struct{}
@@ -127,7 +127,7 @@ func (a *adapter) start() error {
 		return e
 	}
 
-	proxy, err := proxy.NewProxy("http://127.0.0.1:"+a.Port, a.Host)
+	proxy, err := rproxy.New("http://127.0.0.1:"+a.Port, a.Host)
 	if err != nil {
 		return err
 	}
