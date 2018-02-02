@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/hashicorp/golang-lru"
   packages = [".","simplelru"]
-  revision = "d47b7dcae7b7f047c3273fd8ca8d87edf4fdf483"
+  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
 
 [[projects]]
   branch = "master"
@@ -23,7 +23,7 @@
   branch = "master"
   name = "github.com/moomerman/go-lib"
   packages = ["rproxy"]
-  revision = "07fb67817f23bd7ed370d3fd5323abc261b44d9d"
+  revision = "e4ef710c0a5142755e11b04d6a41a52255a1758a"
 
 [[projects]]
   name = "github.com/puma/puma-dev"

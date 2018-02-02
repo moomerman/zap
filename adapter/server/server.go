@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -103,7 +104,7 @@ func (a *adapter) WriteLog(w io.Writer) {
 // ServeHTTP implements the http.Handler interface
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("[proxy]", zadapter.FullURL(r), "->", a.proxy.URL)
-	a.proxy.Proxy(w, r)
+	a.proxy.ServeHTTP(w, r)
 }
 
 // -- PRIVATE --
@@ -127,7 +128,11 @@ func (a *adapter) start() error {
 		return e
 	}
 
-	proxy, err := rproxy.New("http://127.0.0.1:"+a.Port, a.Host)
+	url, err := url.Parse("http://127.0.0.1:" + a.Port)
+	if err != nil {
+		return err
+	}
+	proxy, err := rproxy.New(url, a.Host)
 	if err != nil {
 		return err
 	}

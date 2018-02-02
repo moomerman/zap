@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os/exec"
 
 	"github.com/moomerman/go-lib/rproxy"
@@ -32,7 +33,11 @@ type adapter struct {
 func (a *adapter) Start() error {
 	a.State = zadapter.StatusStarting
 	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
-	proxy, err := rproxy.New(a.Proxy, a.Host)
+	url, err := url.Parse(a.Proxy)
+	if err != nil {
+		return err
+	}
+	proxy, err := rproxy.New(url, a.Host)
 	if err != nil {
 		return err
 	}
@@ -50,7 +55,7 @@ func (a *adapter) Status() zadapter.Status {
 // ServeHTTP implements the http.Handler interface
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("[proxy]", zadapter.FullURL(r), "->", a.proxy.URL)
-	a.proxy.Proxy(w, r)
+	a.proxy.ServeHTTP(w, r)
 }
 
 // Stop stops the adapter
