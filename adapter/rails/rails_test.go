@@ -10,12 +10,9 @@ import (
 
 func TestRubyRails(t *testing.T) {
 
-	adapter, err := New("rails.test", "./test/rails5.1")
-	if err != nil {
-		panic(err)
-	}
+	adapter := New("rails.test", "./test/rails5.1")
 
-	if err = adapter.Start(); err != nil {
+	if err := adapter.Start(); err != nil {
 		panic(err)
 	}
 	time.Sleep(5 * time.Second)

@@ -23,7 +23,7 @@
   branch = "master"
   name = "github.com/moomerman/go-lib"
   packages = ["rproxy"]
-  revision = "e4ef710c0a5142755e11b04d6a41a52255a1758a"
+  revision = "6e23edc62a7b1b8642c3a3ce205b8d379b0abc03"
 
 [[projects]]
   name = "github.com/puma/puma-dev"
@@ -53,19 +53,19 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ed25519","ed25519/internal/edwards25519"]
-  revision = "1875d0a70c90e57f11972aefd42276df65e895b9"
+  revision = "8c653846df49742c4c85ec37e5d9f8d3ba657895"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf","http2","http2/hpack","idna","internal/iana","internal/socket","ipv4","ipv6","lex/httplex"]
-  revision = "b417086c80e91bfa321ef761574721644b8b9f61"
+  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
 
 [[projects]]
-  branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [solve-meta]
   analyzer-name = "dep"

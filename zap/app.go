@@ -15,18 +15,21 @@ import (
 	"github.com/vektra/errors"
 )
 
+var appsMu sync.Mutex
 var apps map[string]*app
-var lock sync.Mutex
 
 // app holds the state of a running Application
 type app struct {
-	sync.Mutex
+	Config *AppConfig
 
-	Config   *AppConfig
-	LastUsed time.Time
-	Adapter  adapter.Adapter
-	Started  time.Time
-	Ngrok    *ngrok.Tunnel
+	lastUsedMu sync.Mutex
+	LastUsed   time.Time
+
+	adapterMu sync.Mutex
+	Adapter   adapter.Adapter
+
+	Started time.Time
+	Ngrok   *ngrok.Tunnel
 }
 
 // newApp creates a new App with the given configuration
@@ -44,6 +47,9 @@ func newApp(config *AppConfig) (*app, error) {
 }
 
 func (a *app) newAdapter() error {
+	a.adapterMu.Lock()
+	a.adapterMu.Unlock()
+
 	var adpt adapter.Adapter
 	var err error
 
@@ -65,14 +71,15 @@ func (a *app) newAdapter() error {
 
 // Start starts an application and monitors activity
 func (a *app) Start() error {
+	a.adapterMu.Lock()
+	defer a.adapterMu.Unlock()
+
 	err := a.Adapter.Start()
 	if err != nil {
 		return err
 	}
 
-	a.Lock()
 	a.LastUsed = time.Now()
-	defer a.Unlock()
 
 	go a.idleMonitor()
 	return nil
@@ -80,15 +87,21 @@ func (a *app) Start() error {
 
 // Stop stops an application handler and removes the app
 func (a *app) Stop(reason string, e error) error {
+	a.adapterMu.Lock()
+	defer a.adapterMu.Unlock()
+	appsMu.Lock()
+	defer appsMu.Unlock()
+
 	log.Println("[app]", a.Config.Host, "stopping", reason, e)
-	lock.Lock()
 	delete(apps, a.Config.Key)
-	lock.Unlock()
 	return a.Adapter.Stop(errors.Context(e, reason))
 }
 
 // Restart restarts an application adapter
 func (a *app) RestartAdapter() error {
+	a.adapterMu.Lock()
+	defer a.adapterMu.Unlock()
+
 	if err := a.Adapter.Stop(errors.New("requested restart")); err != nil {
 		log.Println("[app]", a.Config.Host, "error stopping adapter on restart", err)
 	}
@@ -104,9 +117,9 @@ func (a *app) Status() string {
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.Lock()
+	a.lastUsedMu.Lock()
+	defer a.lastUsedMu.Unlock()
 	a.LastUsed = time.Now()
-	a.Unlock()
 	a.Adapter.ServeHTTP(w, r)
 }
 
@@ -155,8 +168,9 @@ func (a *app) idleMonitor() {
 }
 
 func (a *app) idle() bool {
-	a.Lock()
-	defer a.Unlock()
+	a.lastUsedMu.Lock()
+	defer a.lastUsedMu.Unlock()
+
 	diff := time.Since(a.LastUsed)
 	if diff > 60*60*time.Second {
 		return true
@@ -166,6 +180,9 @@ func (a *app) idle() bool {
 }
 
 func findAppForHost(host string) (*app, error) {
+	appsMu.Lock()
+	defer appsMu.Unlock()
+
 	host = strings.Split(host, ":")[0]
 
 	config, err := getAppConfig(host)
@@ -173,13 +190,11 @@ func findAppForHost(host string) (*app, error) {
 		return nil, err
 	}
 
-	lock.Lock()
 	if apps == nil {
 		apps = make(map[string]*app)
 	}
 
 	app := apps[config.Key]
-	lock.Unlock()
 
 	if app != nil {
 		if app.Status() == "stopped" {
@@ -203,9 +218,7 @@ func findAppForHost(host string) (*app, error) {
 		return nil, errors.Context(err, "app failed to start")
 	}
 
-	lock.Lock()
 	apps[config.Key] = app
-	lock.Unlock()
 
 	return app, nil
 }
