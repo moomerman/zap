@@ -118,8 +118,8 @@ func (a *app) Status() string {
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.lastUsedMu.Lock()
-	defer a.lastUsedMu.Unlock()
 	a.LastUsed = time.Now()
+	a.lastUsedMu.Unlock()
 	a.Adapter.ServeHTTP(w, r)
 }
 
