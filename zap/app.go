@@ -87,13 +87,14 @@ func (a *app) Start() error {
 
 // Stop stops an application handler and removes the app
 func (a *app) Stop(reason string, e error) error {
+	appsMu.Lock()
+	delete(apps, a.Config.Key)
+	appsMu.Unlock()
+
 	a.adapterMu.Lock()
 	defer a.adapterMu.Unlock()
-	appsMu.Lock()
-	defer appsMu.Unlock()
 
 	log.Println("[app]", a.Config.Host, "stopping", reason, e)
-	delete(apps, a.Config.Key)
 	return a.Adapter.Stop(errors.Context(e, reason))
 }
 
