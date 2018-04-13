@@ -4,7 +4,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/golang-lru"
-  packages = [".","simplelru"]
+  packages = [
+    ".",
+    "simplelru"
+  ]
   revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
 
 [[projects]]
@@ -16,18 +19,22 @@
 [[projects]]
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "5364553f1ee9cddc7ac8b62dce148309c386695b"
-  version = "v1.0.4"
+  revision = "83c435cc65d2862736428b9b4d07d0ab10ad3e4d"
+  version = "v1.0.5"
 
 [[projects]]
   branch = "master"
   name = "github.com/moomerman/go-lib"
   packages = ["rproxy"]
-  revision = "6e23edc62a7b1b8642c3a3ce205b8d379b0abc03"
+  revision = "4052cefa833042247801d5b91d9baaa041b4c388"
 
 [[projects]]
   name = "github.com/puma/puma-dev"
-  packages = ["dev/launch","homedir","linebuffer"]
+  packages = [
+    "dev/launch",
+    "homedir",
+    "linebuffer"
+  ]
   revision = "5c92d487b83a50c44dc8864bbe8952328268a7cf"
   version = "0.11"
 
@@ -52,24 +59,52 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ed25519","ed25519/internal/edwards25519"]
-  revision = "8c653846df49742c4c85ec37e5d9f8d3ba657895"
+  packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519"
+  ]
+  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["bpf","http2","http2/hpack","idna","internal/iana","internal/socket","ipv4","ipv6","lex/httplex"]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  packages = [
+    "bpf",
+    "http2",
+    "http2/hpack",
+    "idna",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+    "ipv6",
+    "lex/httplex"
+  ]
+  revision = "61147c48b25b599e5b561d2e9c4f3e1ef489ca41"
 
 [[projects]]
   name = "golang.org/x/text"
-  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable"
+  ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cba628690d9ad49a1a3f2253479125747907e67f783bd9966ad12eddd0d37fb0"
+  inputs-digest = "12fd1eecdb1e94137bdaca7667c796f234848647730259760a8d97a5b5e25132"
   solver-name = "gps-cdcl"
   solver-version = 1

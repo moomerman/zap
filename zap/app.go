@@ -79,7 +79,7 @@ func (a *app) Start() error {
 		return err
 	}
 
-	a.LastUsed = time.Now()
+	a.touch()
 
 	go a.idleMonitor()
 	return nil
@@ -118,9 +118,7 @@ func (a *app) Status() string {
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.lastUsedMu.Lock()
-	a.LastUsed = time.Now()
-	a.lastUsedMu.Unlock()
+	a.touch()
 	a.Adapter.ServeHTTP(w, r)
 }
 
@@ -151,6 +149,12 @@ func (a *app) StartNgrok(host string, port int) error {
 	return nil
 }
 
+func (a *app) touch() {
+	a.lastUsedMu.Lock()
+	defer a.lastUsedMu.Unlock()
+	a.LastUsed = time.Now()
+}
+
 func (a *app) idleMonitor() {
 	log.Println("[app]", a.Config.Host, "starting idle monitor")
 	ticker := time.NewTicker(30 * time.Second)
@@ -164,14 +168,15 @@ func (a *app) idleMonitor() {
 				a.Stop("app is idle", nil)
 				return
 			}
+			if a.Adapter.Status() == adapter.StatusStopped {
+				log.Println("[app]", a.Config.Host, "app is stopped, stopping idle monitor")
+				return
+			}
 		}
 	}
 }
 
 func (a *app) idle() bool {
-	a.lastUsedMu.Lock()
-	defer a.lastUsedMu.Unlock()
-
 	diff := time.Since(a.LastUsed)
 	if diff > 60*60*time.Second {
 		return true

@@ -57,6 +57,7 @@ type adapter struct {
 	Pid             int
 	ShellCommand    string
 
+	stateMu    sync.Mutex
 	state      zadapter.Status
 	cmd        *exec.Cmd
 	proxy      *rproxy.ReverseProxy
@@ -91,8 +92,8 @@ func (a *adapter) Stop(reason error) error {
 
 // Status returns the status of the adapter
 func (a *adapter) Status() zadapter.Status {
-	a.Lock()
-	defer a.Unlock()
+	a.stateMu.Lock()
+	defer a.stateMu.Unlock()
 	return a.state
 }
 
@@ -107,10 +108,8 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.proxy.ServeHTTP(w, r)
 }
 
-// -- PRIVATE --
-
 func (a *adapter) start() error {
-	a.state = zadapter.StatusStarting
+	a.changeState(zadapter.StatusStarting)
 	a.cancelChan = make(chan struct{})
 
 	port, err := findAvailablePort()
@@ -145,8 +144,8 @@ func (a *adapter) start() error {
 }
 
 func (a *adapter) stop() error {
-	a.state = zadapter.StatusStopping
-	close(a.cancelChan)
+	a.changeState(zadapter.StatusStopping)
+	defer close(a.cancelChan)
 
 	err := a.cmd.Process.Kill()
 	if err != nil {
@@ -159,7 +158,6 @@ func (a *adapter) stop() error {
 	log.Println("[app]", a.Host, "shutdown and cleaned up")
 	a.changeState(zadapter.StatusStopped)
 	a.Pid = 0
-
 	return nil
 }
 
@@ -167,6 +165,7 @@ func (a *adapter) error(err error) error {
 	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusStopped {
 		return nil
 	}
+	a.changeState(zadapter.StatusError)
 
 	log.Println("[app]", a.Host, "ERROR", err)
 
@@ -174,7 +173,6 @@ func (a *adapter) error(err error) error {
 		return err
 	}
 
-	a.changeState(zadapter.StatusError)
 	return nil
 }
 
@@ -253,12 +251,13 @@ func (a *adapter) checkPort() {
 	for {
 		select {
 		case <-a.cancelChan:
+			log.Println("[app]", a.Host, "cancel channel closed")
 			return
 		case <-ticker.C:
 			c, err := net.Dial("tcp", ":"+a.Port)
 			if err == nil {
 				defer c.Close()
-				log.Println("[app]", a.Host, "check port available")
+				log.Println("[app]", a.Host, "port", a.Port, "is available")
 				buf := bytes.NewBufferString("")
 				a.WriteLog(buf)
 				a.BootLog = buf.String()
@@ -266,7 +265,7 @@ func (a *adapter) checkPort() {
 				return
 			}
 		case <-timeout:
-			log.Println("[app]", a.Host, "check port timeout")
+			log.Println("[app]", a.Host, "timeout waiting for port", a.Port)
 			a.error(errors.New("check port timeout"))
 			return
 		}
@@ -274,8 +273,8 @@ func (a *adapter) checkPort() {
 }
 
 func (a *adapter) changeState(state zadapter.Status) {
-	a.Lock()
-	defer a.Unlock()
+	a.stateMu.Lock()
+	defer a.stateMu.Unlock()
 	a.state = state
 }
 
