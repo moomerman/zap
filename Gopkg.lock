@@ -19,14 +19,14 @@
 [[projects]]
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "83c435cc65d2862736428b9b4d07d0ab10ad3e4d"
-  version = "v1.0.5"
+  revision = "5a2b9fab83ff0f8bfc99684bd5f43a37abe560f1"
+  version = "v1.0.8"
 
 [[projects]]
   branch = "master"
   name = "github.com/moomerman/go-lib"
   packages = ["rproxy"]
-  revision = "4052cefa833042247801d5b91d9baaa041b4c388"
+  revision = "413b84d3c2caea53ffd3251d6f7e11a2fac46cd8"
 
 [[projects]]
   name = "github.com/puma/puma-dev"
@@ -63,23 +63,23 @@
     "ed25519",
     "ed25519/internal/edwards25519"
   ]
-  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
+  revision = "027cca12c2d63e3d62b670d901e8a2c95854feec"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "bpf",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/iana",
     "internal/socket",
     "ipv4",
-    "ipv6",
-    "lex/httplex"
+    "ipv6"
   ]
-  revision = "61147c48b25b599e5b561d2e9c4f3e1ef489ca41"
+  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -105,6 +105,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "12fd1eecdb1e94137bdaca7667c796f234848647730259760a8d97a5b5e25132"
+  inputs-digest = "c5bb3aa8a634f2b775bc79d884d78bf1a32f20ed4840c0d62f16fa27e5f873cf"
   solver-name = "gps-cdcl"
   solver-version = 1
