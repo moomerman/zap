@@ -190,6 +190,16 @@ func (a *adapter) startApplication(command string) error {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", a.EnvPortName, a.Port))
 	}
 
+	appEnv, err := readEnvFile(cmd.Dir)
+	if err != nil {
+		log.Println("[app]", a.Host, "ERROR", "couldn't read env file", err)
+	}
+
+	for _, pair := range appEnv {
+		log.Println("[app]", a.Host, "INFO", "added env var", pair)
+		cmd.Env = append(cmd.Env, pair)
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
