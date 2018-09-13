@@ -34,7 +34,7 @@
   name = "github.com/moomerman/go-lib"
   packages = ["rproxy"]
   pruneopts = "UT"
-  revision = "413b84d3c2caea53ffd3251d6f7e11a2fac46cd8"
+  revision = "2df34aab356ec4abb6f6d38ab780377101c4857a"
 
 [[projects]]
   digest = "1:07a53954325f093c73561db73561cb728efeadb8bc3b4a6a989acb1391a6b51d"
