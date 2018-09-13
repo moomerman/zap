@@ -2,71 +2,90 @@
 
 
 [[projects]]
-  branch = "master"
+  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
   name = "github.com/hashicorp/golang-lru"
   packages = [
     ".",
-    "simplelru"
+    "simplelru",
   ]
-  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
+  pruneopts = "UT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:caf6db28595425c0e0f2301a00257d11712f65c1878e12cffc42f6b9a9cf3f23"
   name = "github.com/kardianos/osext"
   packages = ["."]
+  pruneopts = "UT"
   revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
 
 [[projects]]
+  digest = "1:463e4140189f8194f9121ca1c7fe3b8e9e9a2ab3d949b43c835c21034927dc62"
   name = "github.com/miekg/dns"
   packages = ["."]
+  pruneopts = "UT"
   revision = "5a2b9fab83ff0f8bfc99684bd5f43a37abe560f1"
   version = "v1.0.8"
 
 [[projects]]
   branch = "master"
+  digest = "1:94602f5f1e0be5db549f45ca29a39143118ce1a1971c9088d3578bf12cd7fb4a"
   name = "github.com/moomerman/go-lib"
   packages = ["rproxy"]
+  pruneopts = "UT"
   revision = "413b84d3c2caea53ffd3251d6f7e11a2fac46cd8"
 
 [[projects]]
+  digest = "1:07a53954325f093c73561db73561cb728efeadb8bc3b4a6a989acb1391a6b51d"
   name = "github.com/puma/puma-dev"
   packages = [
     "dev/launch",
     "homedir",
-    "linebuffer"
+    "linebuffer",
   ]
-  revision = "5c92d487b83a50c44dc8864bbe8952328268a7cf"
-  version = "0.11"
+  pruneopts = "UT"
+  revision = "c5e86b4ab305506245f84b0c51bd1783ca33917a"
+  version = "v0.12"
 
 [[projects]]
   branch = "master"
+  digest = "1:f099f01404787f3d89257d3dd7fbea0c8da7bd9fd3ff9ae9d8bf80c56523b125"
   name = "github.com/unrolled/render"
   packages = ["."]
-  revision = "65450fb6b2d3595beca39f969c411db8f8d5c806"
+  pruneopts = "UT"
+  revision = "4206df6ff70175d219fdb4672ae157fbed820103"
 
 [[projects]]
   branch = "master"
+  digest = "1:3cc2f5944c864b25da512e46b17e175ecf98718db2e687846c7fa040b9d16f1f"
   name = "github.com/vektra/errors"
   packages = ["."]
+  pruneopts = "UT"
   revision = "c64d83aba85aa4392895aadeefabbd24e89f3580"
 
 [[projects]]
   branch = "master"
+  digest = "1:f7a72935dedbd57d651ea4870078bfb61a5c1728c5ed0b3058781e558df0f8a3"
   name = "github.com/yhat/wsutil"
   packages = ["."]
+  pruneopts = "UT"
   revision = "1d66fa95c997864ba4d8479f56609620fe542928"
 
 [[projects]]
   branch = "master"
+  digest = "1:d5891c5bca9c62e5d394ca26491d2b710a1dc08cedeb0ca8f9ac4c3305120b02"
   name = "golang.org/x/crypto"
   packages = [
     "ed25519",
-    "ed25519/internal/edwards25519"
+    "ed25519/internal/edwards25519",
   ]
-  revision = "027cca12c2d63e3d62b670d901e8a2c95854feec"
+  pruneopts = "UT"
+  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
 
 [[projects]]
   branch = "master"
+  digest = "1:9b6ce01ec663e8cccfab3c665d3f9fcea5f7e74fe473ea18bce86008214234f9"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -77,11 +96,13 @@
     "internal/iana",
     "internal/socket",
     "ipv4",
-    "ipv6"
+    "ipv6",
   ]
-  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
+  pruneopts = "UT"
+  revision = "26e67e76b6c3f6ce91f7c52def5af501b4e0f3a2"
 
 [[projects]]
+  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -97,14 +118,26 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
   ]
+  pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c5bb3aa8a634f2b775bc79d884d78bf1a32f20ed4840c0d62f16fa27e5f873cf"
+  input-imports = [
+    "github.com/hashicorp/golang-lru",
+    "github.com/kardianos/osext",
+    "github.com/miekg/dns",
+    "github.com/moomerman/go-lib/rproxy",
+    "github.com/puma/puma-dev/dev/launch",
+    "github.com/puma/puma-dev/homedir",
+    "github.com/puma/puma-dev/linebuffer",
+    "github.com/unrolled/render",
+    "github.com/vektra/errors",
+    "golang.org/x/net/http2",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
