@@ -15,7 +15,13 @@ prompt is shown) so all generated certificates are trusted automatically.
 You need to run the root certificate creation step once:
 
 ```
-  err := cert.CreateCert()
+  keyPath, certPath, err := cert.CreateCert("/path/to/cert/dir", "My CA")
+```
+
+Then install the certificate for your platform:
+
+```
+  err := cert.InstallCert(certPath)
 ```
 
 Now you can create an HTTPS server that uses the root certificate to generate

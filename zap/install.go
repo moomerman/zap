@@ -24,5 +24,5 @@ func Uninstall() error {
 }
 
 func installCertificate() error {
-	return cert.CreateCert()
+	return cert.CreateCertLegacy()
 }

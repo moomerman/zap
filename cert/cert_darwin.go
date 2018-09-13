@@ -7,7 +7,8 @@ import (
 
 const supportDir = "~/Library/Application Support/com.github.moomerman.zap"
 
-func installCert(cert string) error {
+// InstallCert installs a CA certificate root in the KeyChain on macOS
+func InstallCert(cert string) error {
 	fmt.Printf("* Adding certification to system keychain as trusted\n")
 	fmt.Printf("! There is probably a dialog open that you must type your password into\n")
 
