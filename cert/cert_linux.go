@@ -31,7 +31,7 @@ func InstallCert(cert string) error {
 // ###
 
 // certfile="cert.pem"
-// certname="ZAP CA"
+// certname="zap CA"
 
 // ###
 // ### For cert8 (legacy - DBM)
