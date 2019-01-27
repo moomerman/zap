@@ -19,11 +19,10 @@ Zap knows how to manage a number of `Backends` including:
 * SSL - creates a self-signed cert for each domain so you can test SSL in dev
 * Process management - start, monitor, spin down idle apps
 * Log watching - watches log files and restarts application on certain triggers
+* Works on macOS, Linux and Windows (some manual installation required on Linux & Windows)
 
 ## Wishlist
 
-* Linux Suport
-* Windows Support
 * Status UI
 
 ## Credits
