@@ -21,5 +21,5 @@ func Example() {
 	dns.Address = fmt.Sprintf("127.0.0.1:%d", port)
 	log.Println("* DNSServer", dns.Address)
 
-	dns.Serve(domains)
+	dns.Serve()
 }
