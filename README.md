@@ -21,6 +21,15 @@ Zap knows how to manage a number of `Backends` including:
 * Log watching - watches log files and restarts application on certain triggers
 * Works on macOS, Linux and Windows (some manual installation required on Linux & Windows)
 
+## Install
+
+Either grab a binary for your platform from the Releases page or grab the code and build your own
+
+```go
+go build -o zapd main.go # build the zapd binary
+zapd -install # run the installer
+```
+
 ## Wishlist
 
 * Status UI
