@@ -60,7 +60,8 @@ type adapter struct {
 	stateMu    sync.Mutex
 	state      zadapter.Status
 	cmd        *exec.Cmd
-	proxy      *rproxy.ReverseProxy
+	proxiesMu  sync.Mutex
+	proxies    map[string]*rproxy.ReverseProxy
 	stdout     io.Reader
 	log        linebuffer.LineBuffer
 	cancelChan chan struct{}
@@ -104,8 +105,14 @@ func (a *adapter) WriteLog(w io.Writer) {
 
 // ServeHTTP implements the http.Handler interface
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("[proxy]", zadapter.FullURL(r), "->", a.proxy.URL)
-	a.proxy.ServeHTTP(w, r)
+	proxy, err := a.getProxy(r.Host)
+	if err != nil {
+		log.Println("[app]", a.Host, "error trying get proxy", err)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	log.Println("[proxy]", zadapter.FullURL(r), "->", proxy.URL)
+	proxy.ServeHTTP(w, r)
 }
 
 func (a *adapter) start() error {
@@ -127,16 +134,8 @@ func (a *adapter) start() error {
 		return e
 	}
 
-	url, err := url.Parse("http://127.0.0.1:" + a.Port)
-	if err != nil {
-		return err
-	}
-	proxy, err := rproxy.New(url, a.Host)
-	if err != nil {
-		return err
-	}
+	a.proxies = make(map[string]*rproxy.ReverseProxy)
 
-	a.proxy = proxy
 	go a.tail()
 	go a.checkPort()
 
@@ -286,6 +285,28 @@ func (a *adapter) changeState(state zadapter.Status) {
 	a.stateMu.Lock()
 	defer a.stateMu.Unlock()
 	a.state = state
+}
+
+func (a *adapter) getProxy(host string) (*rproxy.ReverseProxy, error) {
+	a.proxiesMu.Lock()
+	defer a.proxiesMu.Unlock()
+
+	if a.proxies[host] != nil {
+		return a.proxies[host], nil
+	}
+
+	url, err := url.Parse("http://127.0.0.1:" + a.Port)
+	if err != nil {
+		return nil, err
+	}
+	proxy, err := rproxy.New(url, host)
+	if err != nil {
+		return nil, err
+	}
+
+	a.proxies[host] = proxy
+
+	return proxy, nil
 }
 
 func findAvailablePort() (string, error) {
