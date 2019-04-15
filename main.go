@@ -22,6 +22,10 @@ var (
 	fDNSDomains = flag.String("domains", "dev:test", "domains to handle for DNS requests, separate with :")
 )
 
+func init() {
+	os.Setenv("GODEBUG", os.Getenv("GODEBUG")+",tls13=1")
+}
+
 func main() {
 	flag.Parse()
 
