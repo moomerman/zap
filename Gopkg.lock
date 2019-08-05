@@ -52,12 +52,12 @@
   version = "v0.12"
 
 [[projects]]
-  digest = "1:d81a708124c38e074fd655f8e9e9218e9461eb208cf23d787b58b193fd3547af"
+  digest = "1:19b096b06e5c774944d2dc97de3cb6622b51f3104d25e4cce2802675fb8562c1"
   name = "github.com/unrolled/render"
   packages = ["."]
   pruneopts = "UT"
-  revision = "449f3985007486f7f42ca7f62b4c8b45d6d89cbf"
-  version = "v1.0.0"
+  revision = "7fc1b8f68b9beddc94385fd212c293caf729277a"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
