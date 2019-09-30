@@ -35,7 +35,7 @@
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  version = "1.1.9"
+  version = "1.1.19"
 
 [[constraint]]
   branch = "master"
