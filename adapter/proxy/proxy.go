@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"os/exec"
 
-	"github.com/moomerman/go-lib/rproxy"
+	"github.com/moomerman/zap/rproxy"
 	zadapter "github.com/moomerman/zap/adapter"
 )
 

@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/go-lib/rproxy"
+	"github.com/moomerman/zap/rproxy"
 	zadapter "github.com/moomerman/zap/adapter"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
