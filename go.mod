@@ -3,7 +3,7 @@ module github.com/moomerman/zap
 go 1.13
 
 require (
-	github.com/hashicorp/golang-lru v0.5.3
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/miekg/dns v1.1.27
 	github.com/puma/puma-dev v0.0.0-20190823070300-4f5ea99b0f51
