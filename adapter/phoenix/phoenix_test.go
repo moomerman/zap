@@ -11,12 +11,9 @@ import (
 
 func TestElixirPhoenix(t *testing.T) {
 
-	adapter, err := New("phoenix.test", "./test/phoenix1.3")
-	if err != nil {
-		panic(err)
-	}
+	adapter := New("phoenix.test", "./test/phoenix1.3")
 
-	if err = adapter.Start(); err != nil {
+	if err := adapter.Start(); err != nil {
 		panic(err)
 	}
 	time.Sleep(5 * time.Second)

@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moomerman/zap/rproxy"
 	zadapter "github.com/moomerman/zap/adapter"
+	"github.com/moomerman/zap/rproxy"
 	"github.com/puma/puma-dev/linebuffer"
 	"github.com/vektra/errors"
 )
@@ -128,6 +128,7 @@ func (a *adapter) start() error {
 
 	a.Port = port
 
+	log.Println("[app] command:", a.ShellCommand)
 	if err := a.startApplication(a.ShellCommand); err != nil {
 		e := errors.Context(err, "could not start application")
 		a.error(e)
@@ -181,7 +182,7 @@ func (a *adapter) startApplication(command string) error {
 	command = fmt.Sprintf(command, a.Port, a.Host)
 	a.Command = command
 
-	cmd := exec.Command(shell, "-l", "-c", command)
+	cmd := exec.Command(shell, "-l", "-i", "-c", command)
 	cmd.Dir = a.Dir
 
 	cmd.Env = os.Environ()
