@@ -11,7 +11,7 @@ import (
 
 func TestElixirPhoenix(t *testing.T) {
 
-	adapter := New("phoenix.test", "./test/phoenix1.3")
+	adapter := New("http", "phoenix.test", "./test/phoenix1.3")
 
 	if err := adapter.Start(); err != nil {
 		panic(err)

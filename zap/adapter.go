@@ -15,29 +15,29 @@ import (
 
 // GetAdapter returns the corresponding adapter for the given
 // host/dir combination
-func GetAdapter(host, dir string) (adapter.Adapter, error) {
+func GetAdapter(scheme, host, dir string) (adapter.Adapter, error) {
 	_, err := os.Stat(path.Join(dir, "mix.exs"))
 	if err == nil {
 		log.Println("[app]", host, "using the phoenix adapter (found mix.exs)")
-		return phoenix.New(host, dir), nil
+		return phoenix.New(scheme, host, dir), nil
 	}
 
 	_, err = os.Stat(path.Join(dir, "Gemfile"))
 	if err == nil {
 		log.Println("[app]", host, "using the rails adapter (found Gemfile)")
-		return rails.New(host, dir), nil
+		return rails.New(scheme, host, dir), nil
 	}
 
 	_, err = os.Stat(path.Join(dir, ".buffalo.dev.yml"))
 	if err == nil {
 		log.Println("[app]", host, "using the buffalo adapter (found .buffalo.dev.yml)")
-		return buffalo.New(host, dir), nil
+		return buffalo.New(scheme, host, dir), nil
 	}
 
 	_, err = os.Stat(path.Join(dir, "config.toml"))
 	if err == nil {
 		log.Println("[app]", host, "using the hugo adapter (found config.toml)")
-		return hugo.New(host, dir), nil
+		return hugo.New(scheme, host, dir), nil
 	}
 
 	log.Println("[app]", host, "using the static adapter")

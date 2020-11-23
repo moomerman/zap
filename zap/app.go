@@ -54,7 +54,7 @@ func (a *app) newAdapter() error {
 	var err error
 
 	if a.Config.Dir != "" {
-		adpt, err = GetAdapter(a.Config.Host, a.Config.Dir)
+		adpt, err = GetAdapter(a.Config.Scheme, a.Config.Host, a.Config.Dir)
 		if err != nil {
 			return errors.Context(err, "could not determine adapter")
 		}

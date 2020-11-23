@@ -10,7 +10,7 @@ import (
 
 func TestRubyRails(t *testing.T) {
 
-	adapter := New("rails.test", "./test/rails5.2")
+	adapter := New("http", "rails.test", "./test/rails5.2")
 
 	if err := adapter.Start(); err != nil {
 		panic(err)

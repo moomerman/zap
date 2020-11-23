@@ -24,6 +24,7 @@ import (
 // Config holds the server configuration
 type Config struct {
 	Name            string
+	Scheme          string
 	Host            string
 	Dir             string
 	EnvPortName     string
@@ -35,6 +36,7 @@ type Config struct {
 func New(config *Config) zadapter.Adapter {
 	return &adapter{
 		Name:            config.Name,
+		Scheme:          config.Scheme,
 		Host:            config.Host,
 		Dir:             config.Dir,
 		EnvPortName:     config.EnvPortName,
@@ -47,6 +49,7 @@ type adapter struct {
 	sync.Mutex
 
 	Name            string
+	Scheme          string
 	Host            string
 	Dir             string
 	Port            string
@@ -255,7 +258,7 @@ func (a *adapter) tail() {
 
 func (a *adapter) checkPort() {
 	ticker := time.NewTicker(250 * time.Millisecond)
-	timeout := time.After(time.Second * 30)
+	timeout := time.After(time.Second * 60)
 	defer ticker.Stop()
 
 	for {
@@ -273,6 +276,9 @@ func (a *adapter) checkPort() {
 				a.BootLog = buf.String()
 				a.changeState(zadapter.StatusRunning)
 				return
+			}
+			if err != nil {
+				log.Println("[app]", a.Host, "error checking port", a.Port, err)
 			}
 		case <-timeout:
 			log.Println("[app]", a.Host, "timeout waiting for port", a.Port)
@@ -296,7 +302,7 @@ func (a *adapter) getProxy(host string) (*rproxy.ReverseProxy, error) {
 		return a.proxies[host], nil
 	}
 
-	url, err := url.Parse("http://127.0.0.1:" + a.Port)
+	url, err := url.Parse(a.Scheme + "://127.0.0.1:" + a.Port)
 	if err != nil {
 		return nil, err
 	}

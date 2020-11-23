@@ -8,14 +8,13 @@ import (
 )
 
 // New creates a new phoenix adapter
-func New(host, dir string) adapter.Adapter {
+func New(scheme, host, dir string) adapter.Adapter {
 
-	// TODO: look at the mix.exs file and determine which version of phoenix
-	// we're starting and use the correct start command
 	mixFileChanged := regexp.MustCompile("You must restart your server")
 
 	config := &server.Config{
 		Name:            "Phoenix",
+		Scheme:          scheme,
 		Host:            host,
 		Dir:             dir,
 		EnvPortName:     "PHX_PORT",

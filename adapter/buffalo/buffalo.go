@@ -6,9 +6,10 @@ import (
 )
 
 // New creates a new adapter
-func New(host, dir string) adapter.Adapter {
+func New(scheme, host, dir string) adapter.Adapter {
 	config := &server.Config{
 		Name:         "Buffalo",
+		Scheme:       scheme,
 		Host:         host,
 		Dir:          dir,
 		EnvPortName:  "PORT",
