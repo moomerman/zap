@@ -5,7 +5,7 @@
 Zap is a development web/proxy server that knows how to start and manage your
 development server processes, and provides SSL access to them.
 
-Zap knows how to manage a number of `Backends` including:
+Zap allows you to specify any command to start a backend server, we've tested it with:
 
 * Elixir/Phoenix
 * Ruby/Rails

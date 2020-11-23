@@ -15,30 +15,18 @@ const appsPath = "~/.zap"
 type AppConfig struct {
 	Scheme  string
 	Host    string
+	Port    string
 	Path    string
 	Dir     string `json:",omitempty"`
-	Content string `json:",omitempty"`
+	Command string `json:",omitempty"`
+	Proxy   string `json:",omitempty"`
 	Key     string
 }
 
 func getAppConfig(host string) (*AppConfig, error) {
-	path, stat, err := getClosestMatchingPath(host)
+	path, err := getClosestMatchingPath(host)
 	if err != nil {
 		return nil, err
-	}
-
-	if stat.IsDir() {
-		dir, err := os.Readlink(path)
-		if err != nil {
-			return nil, err
-		}
-
-		return &AppConfig{
-			Host: host,
-			Path: path,
-			Dir:  dir,
-			Key:  dir,
-		}, nil
 	}
 
 	config, err := readConfigFromFile(path, host)
@@ -55,7 +43,7 @@ func readConfigFromFile(path, host string) (*AppConfig, error) {
 		return nil, err
 	}
 
-	config := &AppConfig{Scheme: "http"}
+	config := &AppConfig{Scheme: "http", Port: "PORT"}
 	err = yaml.Unmarshal([]byte(data), config)
 	if err != nil {
 		return nil, err
@@ -65,7 +53,7 @@ func readConfigFromFile(path, host string) (*AppConfig, error) {
 	config.Key = config.Dir
 	if config.Key == "" {
 		// FIXME: host is coded in the proxy so we need one per host source
-		config.Key = host + "->" + config.Content
+		config.Key = host + "->" + config.Proxy
 	}
 
 	return config, nil
@@ -75,15 +63,15 @@ func readConfigFromFile(path, host string) (*AppConfig, error) {
 // used to match subdomains automatically, eg. if you request moo.foo.dev
 // it will check moo.foo.dev and foo.dev in that order and return the first
 // one it finds
-func getClosestMatchingPath(host string) (string, os.FileInfo, error) {
+func getClosestMatchingPath(host string) (string, error) {
 	path := homedir.MustExpand(appsPath) + "/" + host
-	stat, err := os.Stat(path)
+	_, err := os.Stat(path)
 	if err != nil {
 		parts := strings.Split(host, ".")
 		if len(parts) > 2 {
 			return getClosestMatchingPath(strings.Join(parts[1:], "."))
 		}
-		return path, nil, err
+		return path, err
 	}
-	return path, stat, nil
+	return path, nil
 }

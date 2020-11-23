@@ -23,23 +23,13 @@ interface.
 ### Simple Proxy
 
 A proxy is configured by creating a file in the `~/.zap` folder containing the
-host/port combination that you want to proxy to.  You can specify just a port and
-it will assume localhost.
+URL that you want to proxy to.  
 
-`echo "http://127.0.0.1:3000" > ~/.zap/mysite.dev`
-`echo "4000" > ~/.zap/othersite.dev`
+`echo "proxy: http://127.0.0.1:3000" > ~/.zap/mysite.test`
 
 ### Elixir/Phoenix
 
-When a `mix.exs` file is detected in the root of the dir that a symlink points to
-and contains the `phoenix` package then a `mix phx.server` server will be launched
-on a random port and requests will be proxied to that application.
-
-To configure a phoenix application simply create a symbolic link to the
-phoenix application and update your `config/dev.exs` file to allow zap
-to override the default 4000 http port.
-
-`ln -sf /path/to/phoenix/app ~/.zap/mysite.dev`
+Update your `config/dev.exs` file to allow zap to override the default 4000 http port.
 
 `config/mix.exs`
 ```elixir
@@ -47,35 +37,49 @@ config :your_app, YourApp.Web.Endpoint,
   http: [port: System.get_env("PHX_PORT") || 4000],
 ```
 
+~/.zap/phoenixapp.test
+
+```
+dir: /path/to/phoenix/app
+command: mix phx.server
+port: PHX_PORT
+```
+
 ### Ruby/Rails
 
-If a `Gemfile` is detected in the root of the project then the Ruby/Rails
-adapter is used.
+~/.zap/railsapp.test
+
+```
+dir: /path/to/rails/app
+command: bin/rails s -p %s
+```
 
 ### Go/Buffalo
 
-If a `.buffalo.dev.yml` file is found then a Go/Buffalo developent server
-backend is started.
+~/.zap/buffaloapp.test
+
+```
+dir: /path/to/buffalo/app
+command: buffalo dev
+```
 
 ### Go/Hugo
 
-If a `config.toml` file is found in the root of the project then a Go/Hugo
-development backend is started.
+~/.zap/buffaloapp.test
+
+```
+dir: /path/to/hugo/app
+cmd: hugo server -D -p %s -b https://%s/ --appendPort=false --liveReloadPort=443 --navigateToChanged
+```
 
 ### Static HTML
 
-To enable a static HTML site, simply symlink to a the public directory
+To enable a static HTML site, simply specify the public directory
 where the static files live.  Files in the directory will be served, if a directory
 root is requested `index.html` files will be served if they exist.
 
-`ln -sf /path/to/static/public ~/.zap/mysite.dev`
+~/.zap/staticapp.test
 
-## TODO
-
-* Ruby/Hanami
-* Ruby/Rack
-* Ruby/Rakefile
-* Docker (Compose)
-* Procfile
-* Node/package.json
-* PHP
+```
+dif: /path/to/static/app
+```

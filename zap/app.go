@@ -54,12 +54,12 @@ func (a *app) newAdapter() error {
 	var err error
 
 	if a.Config.Dir != "" {
-		adpt, err = GetAdapter(a.Config.Scheme, a.Config.Host, a.Config.Dir)
+		adpt, err = GetAdapter(a.Config.Scheme, a.Config.Host, a.Config.Port, a.Config.Dir, a.Config.Command)
 		if err != nil {
 			return errors.Context(err, "could not determine adapter")
 		}
 	} else {
-		adpt, err = proxy.New(a.Config.Host, a.Config.Content)
+		adpt, err = proxy.New(a.Config.Host, a.Config.Proxy)
 		if err != nil {
 			return errors.Context(err, "unable to create proxy adapter")
 		}
