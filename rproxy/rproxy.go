@@ -85,7 +85,8 @@ func NewWithTrustedCertificates(target *url.URL, hostname string, certs []*tls.C
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 			TLSClientConfig: &tls.Config{
-				RootCAs: rootCAs,
+				RootCAs:            rootCAs,
+				InsecureSkipVerify: true,
 			},
 		},
 		stripHeaders: []string{"Server"},
