@@ -23,7 +23,7 @@ interface.
 ### Simple Proxy
 
 A proxy is configured by creating a file in the `~/.zap` folder containing the
-URL that you want to proxy to.  
+URL that you want to proxy to.
 
 `echo "proxy: http://127.0.0.1:3000" > ~/.zap/mysite.test`
 
@@ -81,5 +81,5 @@ root is requested `index.html` files will be served if they exist.
 ~/.zap/staticapp.test
 
 ```
-dif: /path/to/static/app
+dir: /path/to/static/app
 ```
