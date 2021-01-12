@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/puma/puma-dev/homedir"
 	"github.com/vektra/errors"
 )
@@ -231,10 +231,8 @@ func CreateCertLegacy() error {
 	if err != nil {
 		return err
 	}
-	if err := writeCACert(supportDir, key, cert); err != nil {
-		return err
-	}
-	return InstallCert(filepath.Join(supportDir, "cert.pem"))
+	return writeCACert(supportDir, key, cert)
+	// return InstallCert(filepath.Join(supportDir, "cert.pem"))
 }
 
 func loadCertLegacy() error {
