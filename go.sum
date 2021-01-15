@@ -18,6 +18,7 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/puma/puma-dev v0.15.1 h1:hy8788HC5yXPjHZYbVOo3asEZUJ0r8db7fhjrJc77EY=
 github.com/puma/puma-dev v0.15.1/go.mod h1:mEPlZnds5VXSn8XcpIgLBDgsxnxzIrteD4Y8C2yw8yI=
+github.com/puma/puma-dev v0.15.2/go.mod h1:mEPlZnds5VXSn8XcpIgLBDgsxnxzIrteD4Y8C2yw8yI=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.2.0 h1:Hbg2NidpLE8veEBkEZTL3CvlkUIVzuU9jDplZO54c48=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
