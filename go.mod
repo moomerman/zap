@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
-	github.com/miekg/dns v1.1.39
+	github.com/miekg/dns v1.1.40
 	github.com/puma/puma-dev v0.15.2
 	github.com/unrolled/render v1.0.3
 	github.com/vektra/errors v0.0.0-20140903201135-c64d83aba85a
