@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"os/exec"
 
-	"github.com/moomerman/zap/rproxy"
 	zadapter "github.com/moomerman/zap/adapter"
+	"github.com/moomerman/zap/rproxy"
 )
 
 // New creates a new proxy
