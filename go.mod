@@ -9,15 +9,15 @@ require (
 	github.com/puma/puma-dev v0.18.3
 	github.com/unrolled/render v1.7.0
 	github.com/vektra/errors v0.0.0-20140903201135-c64d83aba85a
-	golang.org/x/net v0.53.0
+	golang.org/x/net v0.54.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	golang.org/x/mod v0.34.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 )
