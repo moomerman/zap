@@ -29,6 +29,12 @@ func (h *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// a browser loading a page that is still booting is shown the boot
+	// output as it happens, other requests wait for the app
+	if wantsHTML(r) && h.serveBootPage(w, r, a) {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), startTimeout)
 	state := a.waitStarted(ctx)
 	cancel()

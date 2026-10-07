@@ -79,3 +79,33 @@ func TestProxyHandlerReportsFailedBoot(t *testing.T) {
 		t.Errorf("expected a 502 with the app's output, got %d %q", w.Code, w.Body.String())
 	}
 }
+
+func TestProxyHandlerStreamsBootPage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts processes")
+	}
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("needs python3")
+	}
+	t.Setenv("SHELL", "/bin/sh")
+
+	command := `sh -c 'echo compiling...; sleep 0.3; exec python3 -m http.server --bind 127.0.0.1 $PORT'`
+	h := &proxyHandler{manager: newTestManager(t, configs{"server.test": {Dir: t.TempDir(), Command: command, Port: "PORT", Scheme: "http", Key: "server"}})}
+
+	r := httptest.NewRequest("GET", "http://server.test/", nil)
+	r.Header.Set("Accept", "text/html,application/xhtml+xml")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+
+	body := w.Body.String()
+	if w.Code != http.StatusServiceUnavailable || !strings.Contains(body, "compiling...") || !strings.HasSuffix(body, "location.reload()</script>") {
+		t.Errorf("expected a boot page that reloads when running, got %d %q", w.Code, body)
+	}
+
+	// the reload is served by the app
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected the app to serve the reload, got %d", w.Code)
+	}
+}
