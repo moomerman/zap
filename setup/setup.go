@@ -1,4 +1,6 @@
-package zap
+// Package setup installs zapd on this machine: the resolver files that send
+// .test lookups to it, the certificate authority and the service that runs it
+package setup
 
 import (
 	"errors"

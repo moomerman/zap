@@ -1,7 +1,7 @@
 # package dns
 
-This package provides an installer and an implementation of a DNS
-server that can serve requests for a given list of tlds.
+This package provides a DNS responder that answers requests for a given list
+of tlds, and helpers for the macOS resolver files that send lookups to it.
 
 If you configure the server to work with `test` then any DNS lookup that
 ends with `.test` will resolve to localhost.  Eg. `example.test`.
