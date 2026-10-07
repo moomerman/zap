@@ -4,11 +4,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"sync"
 
 	zadapter "github.com/moomerman/zap/adapter"
-	"github.com/moomerman/zap/rproxy"
 )
 
 // New creates a new proxy
@@ -26,7 +26,7 @@ type adapter struct {
 
 	mu    sync.Mutex
 	state zadapter.Status
-	proxy *rproxy.ReverseProxy
+	proxy *httputil.ReverseProxy
 }
 
 // Start starts the proxy
@@ -40,13 +40,7 @@ func (a *adapter) Start() error {
 		a.state = zadapter.StatusError
 		return err
 	}
-	proxy, err := rproxy.New(url, a.host)
-	if err != nil {
-		a.state = zadapter.StatusError
-		return err
-	}
-
-	a.proxy = proxy
+	a.proxy = zadapter.NewReverseProxy(url, a.host)
 	a.state = zadapter.StatusRunning
 	return nil
 }
@@ -74,7 +68,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("[proxy]", zadapter.FullURL(r), "->", proxy.URL)
+	log.Println("[proxy]", zadapter.FullURL(r), "->", a.target)
 	proxy.ServeHTTP(w, r)
 }
 
