@@ -17,7 +17,6 @@ import (
 	"time"
 
 	zadapter "github.com/moomerman/zap/adapter"
-	"github.com/puma/puma-dev/linebuffer"
 )
 
 const (
@@ -56,7 +55,7 @@ func New(config *Config) zadapter.Adapter {
 
 type adapter struct {
 	config Config
-	log    linebuffer.LineBuffer
+	log    lineBuffer
 
 	mu      sync.Mutex
 	state   zadapter.Status
