@@ -260,7 +260,7 @@ func (a *adapter) startProcess() (*run, error) {
 	}
 
 	for _, pair := range appEnv {
-		log.Println("[app]", a.config.Host, "INFO", "added env var", pair)
+		log.Println("[app]", a.config.Host, "INFO", "added env var", sanitiseEnvPair(pair))
 		cmd.Env = append(cmd.Env, pair)
 	}
 
