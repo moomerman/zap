@@ -3,7 +3,33 @@ package server
 import (
 	"bufio"
 	"os"
+	"strings"
 )
+
+// plainEnvKeys are env vars whose values are safe to show in the log.
+var plainEnvKeys = map[string]bool{
+	"PORT":      true,
+	"HOST":      true,
+	"APP_ENV":   true,
+	"GO_ENV":    true,
+	"MIX_ENV":   true,
+	"NODE_ENV":  true,
+	"RACK_ENV":  true,
+	"RAILS_ENV": true,
+}
+
+// sanitiseEnvPair returns a KEY=VALUE pair fit for logging, keeping the key
+// but redacting the value unless the key is known to be harmless.
+func sanitiseEnvPair(pair string) string {
+	key, value, ok := strings.Cut(pair, "=")
+	if !ok {
+		return "[redacted]"
+	}
+	if value == "" || plainEnvKeys[strings.TrimSpace(key)] {
+		return pair
+	}
+	return key + "=[redacted]"
+}
 
 func readEnvFile(dir string) ([]string, error) {
 	file := dir + "/.env"
