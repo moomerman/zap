@@ -13,11 +13,11 @@ import (
 )
 
 // New creates a new static HTML adapter
-func New(dir string) (zadapter.Adapter, error) {
+func New(dir string) zadapter.Adapter {
 	return &adapter{
 		dir:   dir,
 		state: zadapter.StatusStopped,
-	}, nil
+	}
 }
 
 type adapter struct {

@@ -12,12 +12,12 @@ import (
 )
 
 // New creates a new proxy
-func New(host, proxy string) (zadapter.Adapter, error) {
+func New(host, proxy string) zadapter.Adapter {
 	return &adapter{
 		host:   host,
 		target: proxy,
 		state:  zadapter.StatusStopped,
-	}, nil
+	}
 }
 
 type adapter struct {

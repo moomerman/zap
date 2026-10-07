@@ -17,7 +17,7 @@ func installService(httpAddr, httpsAddr string) error {
 		return err
 	}
 
-	return launchd.Install(appID, appName, httpHost, httpPort, httpsHost, httpsPort)
+	return launchd.Install(appID, appName, httpHost, httpPort, httpsHost, httpsPort, DefaultLogDir())
 }
 
 func uninstallService() error {

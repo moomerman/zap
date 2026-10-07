@@ -42,7 +42,7 @@ type Config struct {
 
 	// OnStatus is called when the server finishes booting, fails or exits
 	OnStatus zadapter.StatusFunc
-	// OnLog is called with each line of output
+	// OnLog is called with each line of output, eg. to write it to a file
 	OnLog func(line string)
 }
 
@@ -291,7 +291,6 @@ func (a *adapter) startProcess() (*run, error) {
 
 func (a *adapter) logLine(r *run, line string) {
 	a.log.Append(line)
-	fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.config.Host, r.port, r.cmd.Process.Pid, line)
 
 	if a.config.OnLog != nil {
 		a.config.OnLog(line)

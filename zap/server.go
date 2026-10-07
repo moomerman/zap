@@ -16,6 +16,8 @@ import (
 type Server struct {
 	HTTPAddr  string
 	HTTPSAddr string
+	// LogDir is where app logs are written, see Manager.LogDir
+	LogDir string
 
 	// Manager runs the apps. Serve creates one if it isn't set.
 	Manager *Manager
@@ -29,6 +31,7 @@ type Server struct {
 func (s *Server) Serve() {
 	if s.Manager == nil {
 		s.Manager = NewManager()
+		s.Manager.LogDir = s.LogDir
 	}
 	h := &handlers{manager: s.Manager}
 	s.http = h.httpServer()

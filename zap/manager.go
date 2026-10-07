@@ -51,6 +51,10 @@ type Manager struct {
 	// stopped
 	IdleTimeout time.Duration
 
+	// LogDir is where each app's output is written, one file per app named
+	// after its host. When empty, app output goes to zapd's stdout.
+	LogDir string
+
 	resolve func(host string) (*AppConfig, error)
 
 	mu     sync.Mutex
@@ -230,7 +234,7 @@ func (m *Manager) lookup(host string) (*app, *AppConfig, error) {
 			return nil, nil, ErrShutdown
 		}
 		log.Println("[app]", host, config.Key, "creating app")
-		a = newApp(config, m.publish)
+		a = newApp(config, m.publish, m.LogDir)
 		m.apps[config.Key] = a
 	}
 

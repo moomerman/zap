@@ -30,6 +30,14 @@ go build -o zapd main.go # build the zapd binary
 zapd -install # run the installer
 ```
 
+## Logs
+
+On macOS zapd logs to `~/Library/Logs/zap/zapd.log`, and each app's output is
+written to its own file next to it, named after the host that started it (eg.
+`~/Library/Logs/zap/myapp.test.log`). Change the directory with `-logs`, or pass
+`-logs=` to send app output to zapd's stdout. If you installed zap before this
+change, run `zapd -install` again to move zapd's own log.
+
 ## Wishlist
 
 * Status UI
