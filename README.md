@@ -38,7 +38,9 @@ The installer:
   on both `-install` and `-uninstall`.
 * creates the certificate authority zap signs each host's certificate with.
 * installs a launch agent that runs the zapd binary it was run from, listening
-  directly on `127.0.0.1:80` and `127.0.0.1:443`. Run it again if you move the
+  directly on `127.0.0.1:80` and `127.0.0.1:443`. macOS only lets a normal
+  user bind those ports on all interfaces, so zapd falls back to that and
+  drops any connection that isn't from this machine. Run it again if you move the
   binary, or to change the `-http`, `-https`, `-dns` or `-domains` it passes.
 
 If another file in `/etc/resolver` also claims `.test` (Apple's `container`
