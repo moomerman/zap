@@ -1,8 +1,8 @@
 package server
 
 import (
-	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -18,7 +18,16 @@ import (
 	zadapter "github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/rproxy"
 	"github.com/puma/puma-dev/linebuffer"
-	"github.com/vektra/errors"
+)
+
+const (
+	// bootTimeout is how long an app has to start listening on its port
+	bootTimeout = 60 * time.Second
+	// stopTimeout is how long an app has to exit after SIGTERM before SIGKILL
+	stopTimeout = 5 * time.Second
+	// waitDelay bounds how long Wait waits for output after the process exits,
+	// in case a grandchild that escaped the process group holds the pipe open
+	waitDelay = 2 * time.Second
 )
 
 // Config holds the server configuration
@@ -30,75 +39,166 @@ type Config struct {
 	EnvPortName     string
 	ShellCommand    string
 	RestartPatterns []*regexp.Regexp
+
+	// OnStatus is called when the server finishes booting, fails or exits
+	OnStatus zadapter.StatusFunc
+	// OnLog is called with each line of output
+	OnLog func(line string)
 }
 
 // New returns a new server adapter
 func New(config *Config) zadapter.Adapter {
 	return &adapter{
-		Name:            config.Name,
-		Scheme:          config.Scheme,
-		Host:            config.Host,
-		Dir:             config.Dir,
-		EnvPortName:     config.EnvPortName,
-		ShellCommand:    config.ShellCommand,
-		RestartPatterns: config.RestartPatterns,
+		config: *config,
+		state:  zadapter.StatusStopped,
 	}
 }
 
 type adapter struct {
-	sync.Mutex
+	config Config
+	log    linebuffer.LineBuffer
 
-	Name            string
-	Scheme          string
-	Host            string
-	Dir             string
-	Port            string
-	Command         string
-	EnvPortName     string           `json:",omitempty"`
-	RestartPatterns []*regexp.Regexp `json:",omitempty"`
-	BootLog         string
-	Pid             int
-	ShellCommand    string
+	mu      sync.Mutex
+	state   zadapter.Status
+	err     error
+	port    string
+	command string
+	bootLog string
+	proxy   *rproxy.ReverseProxy
+	run     *run
+}
 
-	stateMu    sync.Mutex
-	state      zadapter.Status
-	cmd        *exec.Cmd
-	proxiesMu  sync.Mutex
-	proxies    map[string]*rproxy.ReverseProxy
-	stdout     io.Reader
-	log        linebuffer.LineBuffer
-	cancelChan chan struct{}
+// run is a single execution of the server process
+type run struct {
+	cmd      *exec.Cmd
+	pid      int
+	port     string
+	out      *lineWriter
+	done     chan struct{} // closed once the process has exited
+	stopping chan struct{} // closed when a stop is requested
+	stopOnce sync.Once
+}
+
+func (r *run) stop() {
+	r.stopOnce.Do(func() { close(r.stopping) })
 }
 
 // Start starts the application
 func (a *adapter) Start() error {
-	a.Lock()
-	defer a.Unlock()
-	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusRunning {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	switch a.state {
+	case zadapter.StatusStarting, zadapter.StatusRunning, zadapter.StatusStopping:
 		return nil
 	}
 
-	log.Println("[app]", a.Host, "START")
-	return a.start()
+	log.Println("[app]", a.config.Host, "START")
+	a.err = nil
+	a.bootLog = ""
+	a.setState(zadapter.StatusStarting)
+
+	port, err := findAvailablePort()
+	if err != nil {
+		return a.fail(fmt.Errorf("couldn't find available port: %w", err))
+	}
+	a.port = port
+
+	target, err := url.Parse(a.config.Scheme + "://127.0.0.1:" + port)
+	if err != nil {
+		return a.fail(err)
+	}
+	// an empty hostname keeps the Host header of each incoming request, so
+	// apps that serve several hosts share one proxy
+	if a.proxy, err = rproxy.New(target, ""); err != nil {
+		return a.fail(err)
+	}
+
+	r, err := a.startProcess()
+	if err != nil {
+		return a.fail(fmt.Errorf("could not start application: %w", err))
+	}
+	a.run = r
+
+	go a.wait(r)
+	go a.checkPort(r)
+
+	return nil
 }
 
-// Stop stops the application
+// Stop stops the application, sending SIGTERM to its process group and
+// escalating to SIGKILL if it hasn't exited within stopTimeout
 func (a *adapter) Stop(reason error) error {
-	a.Lock()
-	defer a.Unlock()
-	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusStopped {
+	a.mu.Lock()
+	r := a.run
+	if r == nil || a.state == zadapter.StatusStopped {
+		a.setState(zadapter.StatusStopped)
+		a.mu.Unlock()
 		return nil
 	}
+	if a.state != zadapter.StatusStopping {
+		log.Println("[app]", a.config.Host, "STOP", reason)
+		a.setState(zadapter.StatusStopping)
+	}
+	a.mu.Unlock()
 
-	log.Println("[app]", a.Host, "STOP", reason)
-	return a.stop()
+	r.stop()
+
+	select {
+	case <-r.done:
+	default:
+		if err := terminate(r.cmd); err != nil {
+			log.Println("[app]", a.config.Host, "error sending SIGTERM", err)
+		}
+	}
+
+	select {
+	case <-r.done:
+	case <-time.After(stopTimeout):
+		log.Println("[app]", a.config.Host, "did not exit, sending SIGKILL")
+		if err := kill(r.cmd); err != nil {
+			log.Println("[app]", a.config.Host, "error sending SIGKILL", err)
+		}
+		<-r.done
+	}
+
+	// the process may have exited before the stop was requested, in which
+	// case wait has already run and left the state alone
+	a.mu.Lock()
+	if a.run == r && a.state == zadapter.StatusStopping {
+		a.setState(zadapter.StatusStopped)
+	}
+	a.mu.Unlock()
+
+	return nil
 }
 
 // Status returns the status of the adapter
 func (a *adapter) Status() zadapter.Status {
-	a.stateMu.Lock()
-	defer a.stateMu.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	return a.state
+}
+
+// Snapshot returns the current state of the adapter
+func (a *adapter) Snapshot() zadapter.Snapshot {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	s := zadapter.Snapshot{
+		Name:    a.config.Name,
+		Status:  a.state,
+		Port:    a.port,
+		Command: a.command,
+		BootLog: a.bootLog,
+	}
+	if a.run != nil && a.state != zadapter.StatusStopped {
+		s.Pid = a.run.pid
+	}
+	if a.err != nil {
+		s.Error = a.err.Error()
+	}
+	return s
 }
 
 // WriteLog writes the log to the given writer
@@ -108,212 +208,170 @@ func (a *adapter) WriteLog(w io.Writer) {
 
 // ServeHTTP implements the http.Handler interface
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	proxy, err := a.getProxy(r.Host)
-	if err != nil {
-		log.Println("[app]", a.Host, "error trying get proxy", err)
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+	a.mu.Lock()
+	proxy := a.proxy
+	a.mu.Unlock()
+
+	if proxy == nil {
+		http.Error(w, "502 Bad Gateway", http.StatusBadGateway)
 		return
 	}
+
 	log.Println("[proxy]", zadapter.FullURL(r), "->", proxy.URL)
 	proxy.ServeHTTP(w, r)
 }
 
-func (a *adapter) start() error {
-	a.changeState(zadapter.StatusStarting)
-	a.cancelChan = make(chan struct{})
-
-	port, err := findAvailablePort()
-	if err != nil {
-		e := errors.Context(err, "couldn't find available port")
-		a.error(e)
-		return e
-	}
-
-	a.Port = port
-
-	log.Println("[app] command:", a.ShellCommand)
-	if err := a.startApplication(a.ShellCommand); err != nil {
-		e := errors.Context(err, "could not start application")
-		a.error(e)
-		return e
-	}
-
-	a.proxies = make(map[string]*rproxy.ReverseProxy)
-
-	go a.tail()
-	go a.checkPort()
-
-	return nil
+// fail records a start failure. The caller must hold mu.
+func (a *adapter) fail(err error) error {
+	log.Println("[app]", a.config.Host, "ERROR", err)
+	a.err = err
+	a.setState(zadapter.StatusError)
+	return err
 }
 
-func (a *adapter) stop() error {
-	a.changeState(zadapter.StatusStopping)
-	defer close(a.cancelChan)
-
-	err := a.cmd.Process.Kill()
-	if err != nil {
-		log.Println("[app]", a.Host, "error trying to stop", err)
-		return err
+// setState changes the state and notifies the observer. The caller must hold
+// mu, which keeps notifications in the same order as the transitions.
+func (a *adapter) setState(state zadapter.Status) {
+	if a.state == state {
+		return
 	}
-
-	a.cmd.Wait()
-
-	log.Println("[app]", a.Host, "shutdown and cleaned up")
-	a.changeState(zadapter.StatusStopped)
-	a.Pid = 0
-	return nil
+	a.state = state
+	if a.config.OnStatus != nil {
+		a.config.OnStatus(state, a.err)
+	}
 }
 
-func (a *adapter) error(err error) error {
-	if a.state == zadapter.StatusStopping || a.state == zadapter.StatusStopped {
-		return nil
-	}
-	a.changeState(zadapter.StatusError)
-
-	log.Println("[app]", a.Host, "ERROR", err)
-
-	if err := a.stop(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (a *adapter) startApplication(command string) error {
+func (a *adapter) startProcess() (*run, error) {
 	shell := os.Getenv("SHELL")
 
-	command = fmt.Sprintf(command, a.Port, a.Host)
-	a.Command = command
+	command := fmt.Sprintf(a.config.ShellCommand, a.port, a.config.Host)
+	a.command = command
+	log.Println("[app] command:", command)
 
 	cmd := exec.Command(shell, "-l", "-i", "-c", command)
-	cmd.Dir = a.Dir
+	cmd.Dir = a.config.Dir
+	setProcessGroup(cmd)
 
 	cmd.Env = os.Environ()
-	if a.EnvPortName != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", a.EnvPortName, a.Port))
+	if a.config.EnvPortName != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", a.config.EnvPortName, a.port))
 	}
 
 	appEnv, err := readEnvFile(cmd.Dir)
 	if err != nil {
-		log.Println("[app]", a.Host, "ERROR", "couldn't read env file", err)
+		log.Println("[app]", a.config.Host, "ERROR", "couldn't read env file", err)
 	}
 
 	for _, pair := range appEnv {
-		log.Println("[app]", a.Host, "INFO", "added env var", pair)
+		log.Println("[app]", a.config.Host, "INFO", "added env var", pair)
 		cmd.Env = append(cmd.Env, pair)
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
+	r := &run{
+		cmd:      cmd,
+		port:     a.port,
+		done:     make(chan struct{}),
+		stopping: make(chan struct{}),
 	}
 
-	a.stdout = stdout
-	cmd.Stderr = cmd.Stdout
+	// Stdout and Stderr are the same writer, so exec calls Write from a
+	// single goroutine
+	r.out = &lineWriter{line: func(line string) { a.logLine(r, line) }}
+	cmd.Stdout = r.out
+	cmd.Stderr = r.out
+	cmd.WaitDelay = waitDelay
 
-	if err = cmd.Start(); err != nil {
-		return errors.Context(err, "starting app")
+	if err := cmd.Start(); err != nil {
+		return nil, err
 	}
+	r.pid = cmd.Process.Pid
 
-	a.Pid = cmd.Process.Pid
-	a.cmd = cmd
-	return nil
+	return r, nil
 }
 
-func (a *adapter) tail() {
-	c := make(chan error)
+func (a *adapter) logLine(r *run, line string) {
+	a.log.Append(line)
+	fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.config.Host, r.port, r.cmd.Process.Pid, line)
 
-	go func() {
-		r := bufio.NewReader(a.stdout)
+	if a.config.OnLog != nil {
+		a.config.OnLog(line)
+	}
 
-		for {
-			line, err := r.ReadString('\n')
-			if line != "" {
-				a.log.Append(line)
-				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, a.cmd.Process.Pid, line)
-
-				for _, pattern := range a.RestartPatterns {
-					if pattern.MatchString(line) {
-						a.Stop(errors.New("Restart pattern matched"))
-						return
-					}
-				}
-			}
-
-			if err != nil {
-				c <- err
-				return
-			}
+	for _, pattern := range a.config.RestartPatterns {
+		if pattern.MatchString(line) {
+			// Stop waits for output to drain, so it can't run on this goroutine
+			go a.Stop(errors.New("restart pattern matched"))
+			return
 		}
-	}()
-
-	var err error
-
-	select {
-	case err = <-c:
-		a.Stop(errors.Context(err, "stdout/stderr closed"))
 	}
-
 }
 
-func (a *adapter) checkPort() {
+// wait waits for the process to exit and records why it did
+func (a *adapter) wait(r *run) {
+	err := r.cmd.Wait()
+	r.out.flush()
+	close(r.done)
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.run != r {
+		return
+	}
+
+	switch a.state {
+	case zadapter.StatusStopping:
+		log.Println("[app]", a.config.Host, "shutdown and cleaned up")
+		a.setState(zadapter.StatusStopped)
+	case zadapter.StatusStarting, zadapter.StatusRunning:
+		if err == nil {
+			err = errors.New("exited")
+		}
+		a.fail(fmt.Errorf("process exited unexpectedly: %w", err))
+	}
+}
+
+func (a *adapter) checkPort(r *run) {
 	ticker := time.NewTicker(250 * time.Millisecond)
-	timeout := time.After(time.Second * 60)
+	timeout := time.After(bootTimeout)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-a.cancelChan:
-			log.Println("[app]", a.Host, "cancel channel closed")
+		case <-r.stopping:
+			return
+		case <-r.done:
 			return
 		case <-ticker.C:
-			c, err := net.Dial("tcp", ":"+a.Port)
-			if err == nil {
-				defer c.Close()
-				log.Println("[app]", a.Host, "port", a.Port, "is available")
-				buf := bytes.NewBufferString("")
-				a.WriteLog(buf)
-				a.BootLog = buf.String()
-				a.changeState(zadapter.StatusRunning)
-				return
-			}
+			c, err := net.Dial("tcp", ":"+r.port)
 			if err != nil {
-				log.Println("[app]", a.Host, "error checking port", a.Port, err)
+				continue
 			}
+			c.Close()
+
+			buf := bytes.NewBufferString("")
+			a.WriteLog(buf)
+
+			a.mu.Lock()
+			if a.run == r && a.state == zadapter.StatusStarting {
+				log.Println("[app]", a.config.Host, "port", r.port, "is available")
+				a.bootLog = buf.String()
+				a.setState(zadapter.StatusRunning)
+			}
+			a.mu.Unlock()
+			return
 		case <-timeout:
-			log.Println("[app]", a.Host, "timeout waiting for port", a.Port)
-			a.error(errors.New("check port timeout"))
+			log.Println("[app]", a.config.Host, "timeout waiting for port", r.port)
+			a.mu.Lock()
+			if a.run == r && a.state == zadapter.StatusStarting {
+				a.fail(errors.New("timed out waiting for the app to listen on its port"))
+			}
+			a.mu.Unlock()
+			// the process is still running, so clean it up
+			go a.Stop(errors.New("boot timeout"))
 			return
 		}
 	}
-}
-
-func (a *adapter) changeState(state zadapter.Status) {
-	a.stateMu.Lock()
-	defer a.stateMu.Unlock()
-	a.state = state
-}
-
-func (a *adapter) getProxy(host string) (*rproxy.ReverseProxy, error) {
-	a.proxiesMu.Lock()
-	defer a.proxiesMu.Unlock()
-
-	if a.proxies[host] != nil {
-		return a.proxies[host], nil
-	}
-
-	url, err := url.Parse(a.Scheme + "://127.0.0.1:" + a.Port)
-	if err != nil {
-		return nil, err
-	}
-	proxy, err := rproxy.New(url, host)
-	if err != nil {
-		return nil, err
-	}
-
-	a.proxies[host] = proxy
-
-	return proxy, nil
 }
 
 func findAvailablePort() (string, error) {

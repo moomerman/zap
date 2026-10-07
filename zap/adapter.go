@@ -9,21 +9,20 @@ import (
 )
 
 // GetAdapter returns the corresponding adapter for the given config
-func GetAdapter(scheme, host, port, dir, command string) (adapter.Adapter, error) {
-
-	if command != "" {
-		config := &server.Config{
+func GetAdapter(config *AppConfig, onStatus adapter.StatusFunc, onLog func(string)) (adapter.Adapter, error) {
+	if config.Command != "" {
+		return server.New(&server.Config{
 			Name:         "Server",
-			Scheme:       scheme,
-			Host:         host,
-			Dir:          dir,
-			EnvPortName:  port,
-			ShellCommand: "exec " + command + " # %s %s",
-		}
-
-		return server.New(config), nil
+			Scheme:       config.Scheme,
+			Host:         config.Host,
+			Dir:          config.Dir,
+			EnvPortName:  config.Port,
+			ShellCommand: "exec " + config.Command + " # %s %s",
+			OnStatus:     onStatus,
+			OnLog:        onLog,
+		}), nil
 	}
 
-	log.Println("[app]", host, "using the static adapter")
-	return static.New(dir)
+	log.Println("[app]", config.Host, "using the static adapter")
+	return static.New(config.Dir)
 }

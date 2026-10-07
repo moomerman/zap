@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
+	"sync"
 	"time"
 
 	zadapter "github.com/moomerman/zap/adapter"
@@ -15,26 +15,33 @@ import (
 // New creates a new static HTML adapter
 func New(dir string) (zadapter.Adapter, error) {
 	return &adapter{
-		Name: "Static",
-		Dir:  dir,
+		dir:   dir,
+		state: zadapter.StatusStopped,
 	}, nil
 }
 
 type adapter struct {
-	Name    string
-	Dir     string
-	State   zadapter.Status
-	BootLog string
+	dir string
+
+	mu    sync.Mutex
+	state zadapter.Status
 }
 
 // Status returns the status of the adapter
 func (d *adapter) Status() zadapter.Status {
-	return d.State
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.state
+}
+
+// Snapshot returns the current state of the adapter
+func (d *adapter) Snapshot() zadapter.Snapshot {
+	return zadapter.Snapshot{Name: "Static", Status: d.Status()}
 }
 
 // ServeHTTP implements the http.Handler interface
 func (d *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	filename := d.Dir + r.URL.Path
+	filename := d.dir + r.URL.Path
 
 	info, err := os.Stat(filename)
 
@@ -68,18 +75,19 @@ func (d *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Start doesn't do anything
 func (d *adapter) Start() error {
-	d.State = zadapter.StatusRunning
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.state = zadapter.StatusRunning
 	return nil
 }
 
 // Stop doesn't do anything
 func (d *adapter) Stop(reason error) error {
-	d.State = zadapter.StatusStopped
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.state = zadapter.StatusStopped
 	return nil
 }
-
-// Command doesn't do anything
-func (d *adapter) Command() *exec.Cmd { return nil }
 
 // WriteLog doesn't do anything
 func (d *adapter) WriteLog(w io.Writer) {}

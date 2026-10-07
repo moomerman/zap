@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os/exec"
+	"sync"
 
 	zadapter "github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/rproxy"
@@ -14,55 +14,77 @@ import (
 // New creates a new proxy
 func New(host, proxy string) (zadapter.Adapter, error) {
 	return &adapter{
-		Name:  "Proxy",
-		Host:  host,
-		Proxy: proxy,
+		host:   host,
+		target: proxy,
+		state:  zadapter.StatusStopped,
 	}, nil
 }
 
 type adapter struct {
-	Name    string
-	Host    string
-	Proxy   string
-	proxy   *rproxy.ReverseProxy
-	State   zadapter.Status
-	BootLog string
+	host   string
+	target string
+
+	mu    sync.Mutex
+	state zadapter.Status
+	proxy *rproxy.ReverseProxy
 }
 
 // Start starts the proxy
 func (a *adapter) Start() error {
-	a.State = zadapter.StatusStarting
-	log.Println("[proxy]", a.Host, "starting proxy to", a.Proxy)
-	url, err := url.Parse(a.Proxy)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	log.Println("[proxy]", a.host, "starting proxy to", a.target)
+	url, err := url.Parse(a.target)
 	if err != nil {
+		a.state = zadapter.StatusError
 		return err
 	}
-	proxy, err := rproxy.New(url, a.Host)
+	proxy, err := rproxy.New(url, a.host)
 	if err != nil {
+		a.state = zadapter.StatusError
 		return err
 	}
 
 	a.proxy = proxy
-	a.State = zadapter.StatusRunning
+	a.state = zadapter.StatusRunning
 	return nil
 }
 
 // Status returns the status of the proxy
 func (a *adapter) Status() zadapter.Status {
-	return a.State
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.state
+}
+
+// Snapshot returns the current state of the proxy
+func (a *adapter) Snapshot() zadapter.Snapshot {
+	return zadapter.Snapshot{Name: "Proxy", Status: a.Status()}
 }
 
 // ServeHTTP implements the http.Handler interface
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("[proxy]", zadapter.FullURL(r), "->", a.proxy.URL)
-	a.proxy.ServeHTTP(w, r)
+	a.mu.Lock()
+	proxy := a.proxy
+	a.mu.Unlock()
+
+	if proxy == nil {
+		http.Error(w, "502 Bad Gateway", http.StatusBadGateway)
+		return
+	}
+
+	log.Println("[proxy]", zadapter.FullURL(r), "->", proxy.URL)
+	proxy.ServeHTTP(w, r)
 }
 
 // Stop stops the adapter
-func (a *adapter) Stop(reason error) error { return nil }
-
-// Command doesn't do anything
-func (a *adapter) Command() *exec.Cmd { return nil }
+func (a *adapter) Stop(reason error) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.state = zadapter.StatusStopped
+	return nil
+}
 
 // WriteLog doesn't do anything
 func (a *adapter) WriteLog(w io.Writer) {}

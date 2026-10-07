@@ -17,14 +17,22 @@ type Server struct {
 	HTTPAddr  string
 	HTTPSAddr string
 
+	// Manager runs the apps. Serve creates one if it isn't set.
+	Manager *Manager
+
 	http  *http.Server
 	https *http.Server
 }
 
-// Serve starts the HTTP servers
+// Serve starts the HTTP servers and blocks until they have stopped and every
+// app has been shut down
 func (s *Server) Serve() {
-	s.http = createHTTPServer()
-	s.https = createHTTPSServer()
+	if s.Manager == nil {
+		s.Manager = NewManager()
+	}
+	h := &handlers{manager: s.Manager}
+	s.http = h.httpServer()
+	s.https = h.httpsServer()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -44,9 +52,17 @@ func (s *Server) Serve() {
 	}()
 
 	wg.Wait()
+
+	// stop the apps once no more requests can start them
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := s.Manager.Shutdown(ctx); err != nil {
+		log.Println("[zap] apps did not all stop", err)
+	}
 }
 
-// Stop gracefully stops the HTTP and HTTPS servers
+// Stop gracefully stops the HTTP and HTTPS servers. Serve then stops the
+// apps before returning.
 func (s *Server) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -55,28 +71,28 @@ func (s *Server) Stop() {
 	s.https.Shutdown(ctx)
 }
 
-func createHTTPServer() *http.Server {
+func (h *handlers) httpServer() *http.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", findAppHandler(appHandler))
+	mux.HandleFunc("/", h.ensureApp(h.app))
 
 	return &http.Server{
 		Handler: mux,
 	}
 }
 
-func createHTTPSServer() *http.Server {
+func (h *handlers) httpsServer() *http.Server {
 	mux := http.NewServeMux()
 	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
 	// Maybe have a zapHandler that checks for localhost and then delegates requests
-	mux.HandleFunc("/zap/api/apps", appsAPIHandler)
-	mux.HandleFunc("/zap/api/log", findAppHandler(logAPIHandler))
-	mux.HandleFunc("/zap/api/state", findAppHandler(stateAPIHandler))
-	mux.HandleFunc("/zap/ngrok/start", findAppHandler(startNgrokHandler))
-	mux.HandleFunc("/zap/ngrok", findAppHandler(ngrokHandler))
-	mux.HandleFunc("/zap/log", findAppHandler(logHandler))
-	mux.HandleFunc("/zap/restart", findAppHandler(restartHandler))
-	mux.HandleFunc("/zap", findAppHandler(statusHandler))
-	mux.HandleFunc("/", findAppHandler(appHandler))
+	mux.HandleFunc("/zap/api/apps", h.appsAPI)
+	mux.HandleFunc("/zap/api/log", h.findApp(h.logAPI))
+	mux.HandleFunc("/zap/api/state", h.findApp(h.stateAPI))
+	mux.HandleFunc("/zap/ngrok/start", h.findApp(h.startNgrok))
+	mux.HandleFunc("/zap/ngrok", h.findApp(h.ngrok))
+	mux.HandleFunc("/zap/log", h.findApp(h.log))
+	mux.HandleFunc("/zap/restart", h.findApp(h.restart))
+	mux.HandleFunc("/zap", h.ensureApp(h.status))
+	mux.HandleFunc("/", h.ensureApp(h.app))
 
 	cache, err := cert.NewCache()
 	if err != nil {
