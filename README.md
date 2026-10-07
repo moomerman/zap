@@ -44,9 +44,9 @@ The installer:
   binary, or to change the `-http`, `-https`, `-dns` or `-domains` it passes.
 
 If another file in `/etc/resolver` also claims `.test` (Apple's `container`
-tool writes `containerization.test`), the installer warns about it. zap's file
-asks to be tried first, but if `.test` hosts don't resolve, check
-`scutil --dns` and remove the other file.
+tool writes `containerization.test`), the installer warns about it. macOS can
+send `.test` lookups to that file's server instead of zap's, so remove it
+unless you need it.
 
 `bin/zapd -uninstall` removes the launch agent and the resolver files zap wrote.
 

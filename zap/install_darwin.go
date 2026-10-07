@@ -58,7 +58,7 @@ func installResolver(dnsAddr string, domains []string) error {
 		return err
 	}
 	for domain, paths := range conflicts {
-		fmt.Printf("! %s also claim .%s, if lookups fail check `scutil --dns` and remove them\n", strings.Join(paths, ", "), domain)
+		fmt.Printf("! %s also claim .%s and macOS may send .%s lookups there instead of to zap, remove them with: sudo rm %s\n", strings.Join(paths, ", "), domain, domain, strings.Join(paths, " "))
 	}
 
 	return nil
