@@ -7,13 +7,19 @@ The interface is currently defined as
 
 ```go
 type Adapter interface {
-	Command() *exec.Cmd
 	Start() error
-	Stop() error
+	Stop(reason error) error
+	Status() Status
+	Snapshot() Snapshot
 	WriteLog(io.Writer)
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 ```
+
+Adapters don't manage their own lifecycle: the `zap.Manager` decides when to
+start and stop them. An adapter that takes time to boot (the server adapter)
+returns from `Start` once its process is launched and reports `running`,
+`error` or an unexpected exit through the `StatusFunc` it was created with.
 
 The `ServeHTTP` function means all adapters implement the `http.Handler`
 interface.

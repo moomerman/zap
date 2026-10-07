@@ -54,8 +54,8 @@ func main() {
 	}
 
 	go func() {
-		ch := make(chan os.Signal)
-		signal.Notify(ch, os.Interrupt, os.Kill, syscall.SIGTERM)
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 
 		log.Printf("[zap] caught signal '%v' shutting down\n", <-ch)
 		responder.Stop()

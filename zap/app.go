@@ -2,133 +2,309 @@ package zap
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/adapter/proxy"
 	"github.com/moomerman/zap/ngrok"
-	"github.com/vektra/errors"
 )
 
-var appsMu sync.Mutex
-var apps map[string]*app
+// State is the lifecycle state of an app
+type State = adapter.Status
 
-// app holds the state of a running Application
+// App lifecycle states
+const (
+	StateStarting = adapter.StatusStarting
+	StateRunning  = adapter.StatusRunning
+	StateStopping = adapter.StatusStopping
+	StateStopped  = adapter.StatusStopped
+	StateError    = adapter.StatusError
+)
+
+// transitions lists the allowed state changes. Anything else is a stale or
+// out of order report and is ignored.
+var transitions = map[State][]State{
+	StateStopped:  {StateStarting},
+	StateError:    {StateStarting, StateStopping},
+	StateStarting: {StateRunning, StateError, StateStopping},
+	StateRunning:  {StateError, StateStopping},
+	StateStopping: {StateStopped},
+}
+
+func canTransition(from, to State) bool {
+	for _, s := range transitions[from] {
+		if s == to {
+			return true
+		}
+	}
+	return false
+}
+
+// app holds the state of an application. The manager owns the app and is the
+// only thing that calls start, stop and restart.
+//
+// Lifecycle operations are serialised by opMu and may block on the adapter.
+// mu guards the fields and is never held while calling into the adapter, so
+// the adapter can report status changes at any time without deadlocking.
 type app struct {
-	Config *AppConfig
+	key     string
+	publish func(Event)
 
-	lastUsedMu sync.Mutex
-	LastUsed   time.Time
+	opMu sync.Mutex
 
-	adapterMu sync.Mutex
-	Adapter   adapter.Adapter
-
-	Started time.Time
-	Ngrok   *ngrok.Tunnel
+	mu       sync.Mutex
+	config   *AppConfig
+	state    State
+	err      error
+	gen      int // incremented on each start, to ignore reports from old adapters
+	adapter  adapter.Adapter
+	started  time.Time
+	lastUsed time.Time
+	ngrok    *ngrok.Tunnel
 }
 
-// newApp creates a new App with the given configuration
-func newApp(config *AppConfig) (*app, error) {
-	app := &app{
-		Config:  config,
-		Started: time.Now(),
+func newApp(config *AppConfig, publish func(Event)) *app {
+	return &app{
+		key:     config.Key,
+		publish: publish,
+		config:  config,
+		state:   StateStopped,
 	}
+}
 
-	if err := app.newAdapter(); err != nil {
-		return nil, err
+// Snapshot is a point-in-time copy of an app's state
+type Snapshot struct {
+	Key      string
+	Status   State
+	Error    string `json:",omitempty"`
+	Config   AppConfig
+	Adapter  adapter.Snapshot
+	Started  time.Time
+	LastUsed time.Time
+	Ngrok    *TunnelSnapshot `json:",omitempty"`
+}
+
+// TunnelSnapshot describes an ngrok tunnel
+type TunnelSnapshot struct {
+	URL      string
+	AdminURL string
+}
+
+func (a *app) snapshot() Snapshot {
+	a.mu.Lock()
+	s := Snapshot{
+		Key:      a.key,
+		Status:   a.state,
+		Config:   *a.config,
+		Started:  a.started,
+		LastUsed: a.lastUsed,
 	}
-
-	return app, nil
-}
-
-// newAdapter builds the adapter from the config. The caller must hold adapterMu
-// (or have exclusive access to the app, as newApp does).
-func (a *app) newAdapter() error {
-	var adpt adapter.Adapter
-	var err error
-
-	if a.Config.Dir != "" {
-		adpt, err = GetAdapter(a.Config.Scheme, a.Config.Host, a.Config.Port, a.Config.Dir, a.Config.Command)
-		if err != nil {
-			return errors.Context(err, "could not determine adapter")
-		}
-	} else {
-		adpt, err = proxy.New(a.Config.Host, a.Config.Proxy)
-		if err != nil {
-			return errors.Context(err, "unable to create proxy adapter")
-		}
+	if a.err != nil {
+		s.Error = a.err.Error()
 	}
+	if a.ngrok != nil {
+		s.Ngrok = &TunnelSnapshot{URL: a.ngrok.URL, AdminURL: a.ngrok.AdminURL}
+	}
+	adpt := a.adapter
+	a.mu.Unlock()
 
-	a.Adapter = adpt
-	return nil
+	if adpt != nil {
+		s.Adapter = adpt.Snapshot()
+	}
+	return s
 }
 
-// Start starts an application and monitors activity
-func (a *app) Start() error {
-	a.adapterMu.Lock()
-	defer a.adapterMu.Unlock()
-
-	return a.start()
+func (a *app) status() State {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.state
 }
 
-// start starts the adapter. The caller must hold adapterMu.
+// setConfig updates the config used the next time the app starts
+func (a *app) setConfig(config *AppConfig) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.config = config
+}
+
+// transition changes state if allowed. The caller must hold mu.
+func (a *app) transition(to State, err error) bool {
+	if !canTransition(a.state, to) {
+		return false
+	}
+	from := a.state
+	a.state = to
+	if to == StateError || to == StateStarting {
+		a.err = err
+	}
+	log.Println("[app]", a.config.Host, from, "->", to)
+	a.publish(Event{Type: EventStatus, Key: a.key, Host: a.config.Host, Status: to, Error: errString(err), Time: time.Now()})
+	return true
+}
+
+// start starts the app with a fresh adapter built from the current config
 func (a *app) start() error {
-	err := a.Adapter.Start()
+	a.opMu.Lock()
+	defer a.opMu.Unlock()
+	return a.startLocked()
+}
+
+func (a *app) startLocked() error {
+	a.mu.Lock()
+	if !a.transition(StateStarting, nil) {
+		a.mu.Unlock()
+		return nil // already starting or running
+	}
+	a.gen++
+	gen := a.gen
+	config := a.config
+	old := a.adapter
+	a.adapter = nil
+	a.started = time.Now()
+	a.lastUsed = a.started
+	a.mu.Unlock()
+
+	// an adapter that failed may still have a process to clean up
+	if old != nil {
+		old.Stop(fmt.Errorf("replaced"))
+	}
+
+	adpt, err := a.newAdapter(config, gen)
+	if err == nil {
+		a.mu.Lock()
+		a.adapter = adpt
+		a.mu.Unlock()
+		err = adpt.Start()
+	}
 	if err != nil {
+		a.mu.Lock()
+		a.transition(StateError, err)
+		a.mu.Unlock()
 		return err
 	}
 
-	a.touch()
-
-	go a.idleMonitor()
+	// adapters with nothing to boot are running as soon as Start returns
+	a.adapterChanged(gen, adpt.Status(), nil)
 	return nil
 }
 
-// Stop stops an application handler and removes the app
-func (a *app) Stop(reason string, e error) error {
-	appsMu.Lock()
-	delete(apps, a.Config.Key)
-	appsMu.Unlock()
-
-	a.adapterMu.Lock()
-	defer a.adapterMu.Unlock()
-
-	log.Println("[app]", a.Config.Host, "stopping", reason, e)
-	return a.Adapter.Stop(errors.Context(e, reason))
+// stop stops the app's adapter and any ngrok tunnel
+func (a *app) stop(reason error) error {
+	a.opMu.Lock()
+	defer a.opMu.Unlock()
+	return a.stopLocked(reason)
 }
 
-// Restart restarts an application adapter
-func (a *app) RestartAdapter() error {
-	a.adapterMu.Lock()
-	defer a.adapterMu.Unlock()
+func (a *app) stopLocked(reason error) error {
+	a.mu.Lock()
+	if !a.transition(StateStopping, nil) {
+		a.mu.Unlock()
+		return nil // already stopped
+	}
+	adpt := a.adapter
+	tunnel := a.ngrok
+	a.ngrok = nil
+	host := a.config.Host
+	a.mu.Unlock()
 
-	if err := a.Adapter.Stop(errors.New("requested restart")); err != nil {
-		log.Println("[app]", a.Config.Host, "error stopping adapter on restart", err)
+	log.Println("[app]", host, "stopping:", reason)
+
+	if tunnel != nil {
+		tunnel.Stop()
 	}
-	if err := a.newAdapter(); err != nil {
-		return err
+
+	var err error
+	if adpt != nil {
+		err = adpt.Stop(reason)
 	}
-	return a.start()
+
+	a.mu.Lock()
+	a.transition(StateStopped, nil)
+	a.mu.Unlock()
+	return err
 }
 
-// Status returns the status of the application
-func (a *app) Status() string {
-	return string(a.Adapter.Status())
+// restart stops the app if needed and starts it again with the current config
+func (a *app) restart() error {
+	a.opMu.Lock()
+	defer a.opMu.Unlock()
+
+	if err := a.stopLocked(fmt.Errorf("requested restart")); err != nil {
+		log.Println("[app]", a.key, "error stopping on restart", err)
+	}
+	return a.startLocked()
+}
+
+// adapterChanged applies a status reported by the adapter of generation gen
+func (a *app) adapterChanged(gen int, status adapter.Status, err error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if gen != a.gen {
+		return
+	}
+
+	switch status {
+	case adapter.StatusRunning:
+		a.transition(StateRunning, nil)
+	case adapter.StatusError:
+		a.transition(StateError, err)
+	case adapter.StatusStopped:
+		// a stop we asked for is handled by stopLocked; anything else means
+		// the backend went away on its own
+		a.transition(StateError, fmt.Errorf("stopped unexpectedly"))
+	}
+}
+
+func (a *app) newAdapter(config *AppConfig, gen int) (adapter.Adapter, error) {
+	if config.Dir == "" {
+		adpt, err := proxy.New(config.Host, config.Proxy)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create proxy adapter: %w", err)
+		}
+		return adpt, nil
+	}
+
+	onStatus := func(status adapter.Status, err error) { a.adapterChanged(gen, status, err) }
+	onLog := func(line string) {
+		a.publish(Event{Type: EventLog, Key: a.key, Host: config.Host, Line: line, Time: time.Now()})
+	}
+
+	adpt, err := GetAdapter(config, onStatus, onLog)
+	if err != nil {
+		return nil, fmt.Errorf("could not determine adapter: %w", err)
+	}
+	return adpt, nil
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.touch()
-	a.Adapter.ServeHTTP(w, r)
+
+	a.mu.Lock()
+	adpt := a.adapter
+	a.mu.Unlock()
+
+	if adpt == nil {
+		http.Error(w, "502 Bad Gateway", http.StatusBadGateway)
+		return
+	}
+	adpt.ServeHTTP(w, r)
 }
 
 // WriteLog writes out the application log to the given writer
 func (a *app) WriteLog(w io.Writer) {
-	a.Adapter.WriteLog(w)
+	a.mu.Lock()
+	adpt := a.adapter
+	a.mu.Unlock()
+
+	if adpt != nil {
+		adpt.WriteLog(w)
+	}
 }
 
 // LogTail returns the last X lines of the log file
@@ -138,97 +314,42 @@ func (a *app) LogTail() string {
 	return buf.String()
 }
 
-func (a *app) StartNgrok(host string, port int) error {
-	// TODO: check if another ngrok instance exists
-	// if so, stop it and cleanup
-	ngrok, err := ngrok.StartTunnel(host, port)
+func (a *app) startNgrok(host string, port int) error {
+	a.mu.Lock()
+	existing := a.ngrok
+	a.mu.Unlock()
+	if existing != nil {
+		return nil
+	}
+
+	tunnel, err := ngrok.StartTunnel(host, port)
 	if err != nil {
 		return err
 	}
 
-	a.Ngrok = ngrok
-
-	// TODO: add the symbolic link
-
+	a.mu.Lock()
+	a.ngrok = tunnel
+	a.mu.Unlock()
 	return nil
 }
 
 func (a *app) touch() {
-	a.lastUsedMu.Lock()
-	defer a.lastUsedMu.Unlock()
-	a.LastUsed = time.Now()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.lastUsed = time.Now()
 }
 
-func (a *app) idleMonitor() {
-	log.Println("[app]", a.Config.Host, "starting idle monitor")
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if a.idle() {
-				log.Println("[app]", a.Config.Host, "app is idle")
-				a.Stop("app is idle", nil)
-				return
-			}
-			if a.Adapter.Status() == adapter.StatusStopped {
-				log.Println("[app]", a.Config.Host, "app is stopped, stopping idle monitor")
-				return
-			}
-		}
-	}
+// idleSince reports whether the app is active and unused since t
+func (a *app) idleSince(t time.Time) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	active := a.state == StateStarting || a.state == StateRunning
+	return active && a.lastUsed.Before(t)
 }
 
-func (a *app) idle() bool {
-	diff := time.Since(a.LastUsed)
-	if diff > 60*60*time.Second {
-		return true
+func errString(err error) string {
+	if err == nil {
+		return ""
 	}
-
-	return false
-}
-
-func findAppForHost(host string) (*app, error) {
-	appsMu.Lock()
-	defer appsMu.Unlock()
-
-	host = strings.Split(host, ":")[0]
-
-	config, err := getAppConfig(host)
-	if err != nil {
-		return nil, err
-	}
-
-	if apps == nil {
-		apps = make(map[string]*app)
-	}
-
-	app := apps[config.Key]
-
-	if app != nil {
-		if app.Status() == "stopped" {
-			if err := app.RestartAdapter(); err != nil {
-				return nil, errors.Context(err, "app failed to restart")
-			}
-		}
-		return app, nil
-	}
-
-	log.Println("[app]", host, config.Key, "creating app")
-
-	app, err = newApp(config)
-	if err != nil {
-		log.Println("[app]", host, config.Key, "error creating app", err)
-		return nil, errors.Context(err, "app failed to create")
-	}
-
-	if err := app.Start(); err != nil {
-		log.Println("[app]", host, config.Key, "error starting app", err)
-		return nil, errors.Context(err, "app failed to start")
-	}
-
-	apps[config.Key] = app
-
-	return app, nil
+	return err.Error()
 }
