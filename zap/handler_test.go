@@ -109,3 +109,11 @@ func TestProxyHandlerStreamsBootPage(t *testing.T) {
 		t.Errorf("expected the app to serve the reload, got %d", w.Code)
 	}
 }
+
+func TestListenRejectsOldLaunchdSockets(t *testing.T) {
+	for _, addr := range []string{"Socket", "SocketTLS"} {
+		if _, err := listen(addr); err == nil || !strings.Contains(err.Error(), "-install") {
+			t.Errorf("%s: got %v, want an error asking to reinstall", addr, err)
+		}
+	}
+}

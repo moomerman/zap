@@ -3,9 +3,13 @@ package zap
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/moomerman/zap/cert"
@@ -72,6 +76,40 @@ func (s *Server) Stop() {
 
 	s.http.Shutdown(ctx)
 	s.https.Shutdown(ctx)
+}
+
+func (s *Server) serveHTTP() error {
+	listener, err := listen(s.HTTPAddr)
+	if err != nil {
+		log.Fatal("[zap] unable to create listener ", err)
+	}
+
+	log.Println("[zap] http listening at", listener.Addr())
+	return s.http.Serve(listener)
+}
+
+func (s *Server) serveHTTPS() error {
+	listener, err := listen(s.HTTPSAddr)
+	if err != nil {
+		log.Fatal("[zap] unable to create tls listener ", err)
+	}
+
+	log.Println("[zap] https listening at", listener.Addr())
+	return s.https.Serve(tls.NewListener(listener, s.https.TLSConfig))
+}
+
+func listen(addr string) (net.Listener, error) {
+	// launchd socket activation is gone, so an old launch agent passing
+	// -http=Socket needs replacing
+	if addr == "Socket" || addr == "SocketTLS" {
+		return nil, fmt.Errorf("%q is from an old launch agent, run zapd -install again", addr)
+	}
+
+	listener, err := net.Listen("tcp", addr)
+	if errors.Is(err, syscall.EACCES) {
+		return nil, fmt.Errorf("%w (this system needs root to listen on ports below 1024, use higher ports with -http and -https)", err)
+	}
+	return listener, err
 }
 
 func httpsServer(h http.Handler) *http.Server {

@@ -1,110 +1,141 @@
 package launchd
 
 import (
+	"bytes"
+	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/kardianos/osext"
-	"github.com/puma/puma-dev/homedir"
-	"github.com/vektra/errors"
+	"time"
 )
 
-// Install installs the launch agent on macOS
-// zapd's own output goes to <logDir>/<appName>.log, next to the app logs.
-func Install(appID, appName, httpHost, httpPort, tlsHost, tlsPort, logDir string) error {
-	Uninstall(appID, appName)
-
-	binPath, err := osext.Executable()
+// Install writes a launch agent that runs the current executable with args
+// and boots it into the user's GUI session, replacing any earlier install.
+// The program's output goes to logPath.
+func Install(label string, args []string, logPath string) error {
+	binPath, err := os.Executable()
 	if err != nil {
-		return errors.Context(err, "calculating executable path")
+		return fmt.Errorf("calculating executable path: %w", err)
+	}
+	if binPath, err = filepath.EvalSymlinks(binPath); err != nil {
+		return fmt.Errorf("calculating executable path: %w", err)
 	}
 
-	fmt.Printf("* Use '%s' as the location of %s\n", binPath, appName)
+	fmt.Printf("* Using '%s' as the location of %s\n", binPath, label)
 
-	var userTemplate = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-   <key>Label</key>
-   <string>%s</string>
-   <key>ProgramArguments</key>
-   <array>
-	     <string>%s</string>
-			 <string>-http=Socket</string>
-			 <string>-https=SocketTLS</string>
-   </array>
-   <key>KeepAlive</key>
-   <true/>
-   <key>RunAtLoad</key>
-   <true/>
-   <key>Sockets</key>
-   <dict>
-       <key>Socket</key>
-       <dict>
-           <key>SockNodeName</key>
-           <string>%s</string>
-           <key>SockServiceName</key>
-           <string>%s</string>
-       </dict>
-       <key>SocketTLS</key>
-       <dict>
-           <key>SockNodeName</key>
-           <string>%s</string>
-           <key>SockServiceName</key>
-           <string>%s</string>
-       </dict>
-   </dict>
-   <key>StandardOutPath</key>
-   <string>%s</string>
-   <key>StandardErrorPath</key>
-   <string>%s</string>
-</dict>
-</plist>
-`
-
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return errors.Context(err, "creating log directory")
-	}
-	logPath := filepath.Join(logDir, appName+".log")
-	plistDir := homedir.MustExpand("~/Library/LaunchAgents")
-	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appID + ".plist")
-
-	config := []byte(fmt.Sprintf(userTemplate, appName, binPath, httpHost, httpPort, tlsHost, tlsPort, logPath, logPath))
-
-	if err := os.MkdirAll(plistDir, 0755); err != nil {
-		return errors.Context(err, "creating LaunchAgents directory")
+	plist, err := plistPath(label)
+	if err != nil {
+		return err
 	}
 
-	if err := ioutil.WriteFile(plist, config, 0644); err != nil {
-		return errors.Context(err, "writing LaunchAgent plist")
+	// boot out whatever the old plist describes, even if its label differs
+	if _, err := os.Stat(plist); err == nil {
+		launchctl("bootout", domain(), plist)
 	}
 
-	exec.Command("launchctl", "unload", plist).Run()
-
-	if err := exec.Command("launchctl", "load", plist).Run(); err != nil {
-		return errors.Context(err, "launchctl load <plist>")
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		return fmt.Errorf("creating log directory: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(plist), 0755); err != nil {
+		return fmt.Errorf("creating LaunchAgents directory: %w", err)
+	}
+	if err := os.WriteFile(plist, Plist(label, append([]string{binPath}, args...), logPath), 0644); err != nil {
+		return fmt.Errorf("writing LaunchAgent plist: %w", err)
 	}
 
-	fmt.Printf("* Installed %s on ports: http %s, https %s\n", appID, httpPort, tlsPort)
+	// bootout can return before the old job has gone, which makes an
+	// immediate bootstrap fail, so give it a moment
+	for attempt := 0; ; attempt++ {
+		err = launchctl("bootstrap", domain(), plist)
+		if err == nil || attempt == 10 {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	if err != nil {
+		return err
+	}
 
+	fmt.Printf("* Installed %s\n", plist)
 	return nil
 }
 
-// Uninstall removes the launch agent on macOS
-func Uninstall(appID, appName string) error {
-	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appID + ".plist")
-
-	if err := exec.Command("launchctl", "unload", plist).Run(); err != nil {
-		return errors.Context(err, "launchctl unload <plist>")
+// Uninstall stops the launch agent and removes its plist
+func Uninstall(label string) error {
+	plist, err := plistPath(label)
+	if err != nil {
+		return err
 	}
+
+	if _, err := os.Stat(plist); os.IsNotExist(err) {
+		fmt.Printf("* %s is not installed\n", label)
+		return nil
+	}
+
+	launchctl("bootout", domain(), plist)
 
 	if err := os.Remove(plist); err != nil {
-		return errors.Context(err, "removing LaunchAgent plist")
+		return fmt.Errorf("removing LaunchAgent plist: %w", err)
 	}
 
-	fmt.Printf("* Removed %s from automatically running\n", appID)
+	fmt.Printf("* Removed %s from automatically running\n", label)
 	return nil
+}
+
+// Plist returns a launch agent that keeps program running
+func Plist(label string, program []string, logPath string) []byte {
+	var b bytes.Buffer
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>` + escape(label) + `</string>
+	<key>ProgramArguments</key>
+	<array>
+`)
+	for _, arg := range program {
+		b.WriteString("\t\t<string>" + escape(arg) + "</string>\n")
+	}
+	b.WriteString(`	</array>
+	<key>KeepAlive</key>
+	<true/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>` + escape(logPath) + `</string>
+	<key>StandardErrorPath</key>
+	<string>` + escape(logPath) + `</string>
+</dict>
+</plist>
+`)
+	return b.Bytes()
+}
+
+func plistPath(label string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("finding home directory: %w", err)
+	}
+	return filepath.Join(home, "Library", "LaunchAgents", label+".plist"), nil
+}
+
+// domain is the launchd domain for the current user's GUI session
+func domain() string {
+	return fmt.Sprintf("gui/%d", os.Getuid())
+}
+
+func launchctl(args ...string) error {
+	out, err := exec.Command("launchctl", args...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("launchctl %s %s: %w: %s", args[0], args[1], err, bytes.TrimSpace(out))
+	}
+	return nil
+}
+
+func escape(s string) string {
+	var b bytes.Buffer
+	xml.EscapeText(&b, []byte(s))
+	return b.String()
 }

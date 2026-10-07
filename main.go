@@ -23,7 +23,7 @@ var (
 	fHTTP       = flag.String("http", "127.0.0.1:80", "address to listen on for HTTP requests")
 	fHTTPS      = flag.String("https", "127.0.0.1:443", "address to listen on for HTTPS requests")
 	fDNS        = flag.String("dns", "127.0.0.1:9253", "address to listen on for DNS requests")
-	fDNSDomains = flag.String("domains", "dev:test", "domains to handle for DNS requests, separate with :")
+	fDNSDomains = flag.String("domains", "test", "domains to handle for DNS requests, separate with :")
 	fLogs       = flag.String("logs", zap.DefaultLogDir(), "directory for app logs, one file per app (empty logs to stdout)")
 	fControl    = flag.String("control", control.DefaultSocketPath(), "unix socket for the control API used by the zap command (empty to disable)")
 )
@@ -35,23 +35,25 @@ func init() {
 func main() {
 	flag.Parse()
 
+	domains := strings.Split(*fDNSDomains, ":")
+
 	if *fInstall {
-		if err := zap.Install(*fHTTP, *fHTTPS, *fDNS); err != nil {
-			log.Fatal("[zap] unable to install zap", err)
+		if err := zap.Install(*fHTTP, *fHTTPS, *fDNS, domains); err != nil {
+			log.Fatal("[zap] unable to install zap: ", err)
 		}
 		return
 	}
 
 	if *fUninstall {
-		if err := zap.Uninstall(); err != nil {
-			log.Fatal("[zap] unable to uninstall zap", err)
+		if err := zap.Uninstall(domains); err != nil {
+			log.Fatal("[zap] unable to uninstall zap: ", err)
 		}
 		return
 	}
 
 	responder := &dns.Responder{
 		Address: *fDNS,
-		Domains: strings.Split(*fDNSDomains, ":"),
+		Domains: domains,
 	}
 
 	manager := zap.NewManager()
