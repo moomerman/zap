@@ -22,6 +22,7 @@ type fakeManager struct {
 	status  zap.State
 	actions []string
 	events  chan zap.Event
+	fail    error // returned by every action when set
 }
 
 func (m *fakeManager) snapshot() zap.Snapshot {
@@ -48,6 +49,9 @@ func (m *fakeManager) act(name string, status zap.State) func(string) error {
 	return func(key string) error {
 		m.mu.Lock()
 		defer m.mu.Unlock()
+		if m.fail != nil {
+			return m.fail
+		}
 		m.actions = append(m.actions, name+" "+key)
 		if status != "" {
 			m.status = status
@@ -59,9 +63,6 @@ func (m *fakeManager) act(name string, status zap.State) func(string) error {
 func (m *fakeManager) Start(key string) error   { return m.act("start", zap.StateRunning)(key) }
 func (m *fakeManager) Stop(key string) error    { return m.act("stop", zap.StateStopped)(key) }
 func (m *fakeManager) Restart(key string) error { return m.act("restart", zap.StateRunning)(key) }
-func (m *fakeManager) StartNgrok(key string) error {
-	return errors.New("ngrok is not installed")
-}
 
 func (m *fakeManager) WriteLog(key string, w io.Writer) error {
 	io.WriteString(w, "booting\nready\n")
@@ -153,13 +154,13 @@ func TestAppsAndActions(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
-	c, _ := startServer(t, &fakeManager{events: make(chan zap.Event)})
+	c, _ := startServer(t, &fakeManager{events: make(chan zap.Event), fail: errors.New("port in use")})
 	ctx := context.Background()
 
 	if _, err := c.App(ctx, "nope.test"); err == nil || !strings.Contains(err.Error(), "app not found") {
 		t.Errorf("expected not found, got %v", err)
 	}
-	if _, err := c.Ngrok(ctx, "phx.test"); err == nil || err.Error() != "ngrok is not installed" {
+	if _, err := c.Start(ctx, "phx.test"); err == nil || err.Error() != "port in use" {
 		t.Errorf("expected the manager's error, got %v", err)
 	}
 }

@@ -24,7 +24,6 @@ type Manager interface {
 	Start(key string) error
 	Stop(key string) error
 	Restart(key string) error
-	StartNgrok(key string) error
 	WriteLog(key string, w io.Writer) error
 	Subscribe() (<-chan zap.Event, func())
 }
@@ -53,7 +52,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/apps/{host}/start", s.action(Manager.Start))
 	mux.HandleFunc("POST /v1/apps/{host}/stop", s.action(Manager.Stop))
 	mux.HandleFunc("POST /v1/apps/{host}/restart", s.action(Manager.Restart))
-	mux.HandleFunc("POST /v1/apps/{host}/ngrok", s.action(Manager.StartNgrok))
 	mux.HandleFunc("GET /v1/apps/{host}/log", s.log)
 	mux.HandleFunc("GET /v1/events", s.events)
 	return mux

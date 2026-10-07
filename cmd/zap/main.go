@@ -25,7 +25,6 @@ Commands:
   restart <host>        restart an app
   logs [-f] <host>      show an app's recent output, -f to follow it
   events [host]         stream status changes and output for all apps, or one
-  ngrok <host>          open an ngrok tunnel to an app
 
 Flags:
 `
@@ -78,7 +77,7 @@ func run(ctx context.Context, c *control.Client, cmd string, args []string) erro
 		printApp(os.Stdout, app, time.Now())
 		return nil
 
-	case "start", "stop", "restart", "ngrok":
+	case "start", "stop", "restart":
 		host, err := oneHost(cmd, args)
 		if err != nil {
 			return err
@@ -87,15 +86,10 @@ func run(ctx context.Context, c *control.Client, cmd string, args []string) erro
 			"start":   c.Start,
 			"stop":    c.Stop,
 			"restart": c.Restart,
-			"ngrok":   c.Ngrok,
 		}
 		app, err := actions[cmd](ctx, host)
 		if err != nil {
 			return err
-		}
-		if cmd == "ngrok" {
-			fmt.Println(app.Ngrok)
-			return nil
 		}
 		fmt.Printf("%s %s\n", app.Host, app.Status)
 		return nil
@@ -176,7 +170,6 @@ func printApp(w io.Writer, a control.App, now time.Time) {
 	row("Pid", pid(a.Pid))
 	row("Up", uptime(a, now))
 	row("Idle", since(a.LastUsed, now))
-	row("Ngrok", a.Ngrok)
 	tw.Flush()
 }
 

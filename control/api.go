@@ -8,7 +8,6 @@
 //	POST /v1/apps/{host}/start     start, stop or restart an app
 //	POST /v1/apps/{host}/stop
 //	POST /v1/apps/{host}/restart
-//	POST /v1/apps/{host}/ngrok     open an ngrok tunnel to an app
 //	GET  /v1/apps/{host}/log       recent output, as plain text
 //	GET  /v1/events[?host=]        server-sent events, one Event per message
 //
@@ -37,7 +36,6 @@ type App struct {
 
 	Started  *time.Time `json:"started,omitempty"`
 	LastUsed *time.Time `json:"lastUsed,omitempty"`
-	Ngrok    string     `json:"ngrok,omitempty"`
 }
 
 // Event is a status change or a line of output from an app
@@ -76,9 +74,6 @@ func newApp(s zap.Snapshot) App {
 		a.Kind = "static"
 	default:
 		a.Kind = "server"
-	}
-	if s.Ngrok != nil {
-		a.Ngrok = s.Ngrok.URL
 	}
 	return a
 }

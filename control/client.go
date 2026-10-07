@@ -70,11 +70,6 @@ func (c *Client) Restart(ctx context.Context, host string) (App, error) {
 	return c.action(ctx, host, "restart")
 }
 
-// Ngrok opens an ngrok tunnel to the app serving host
-func (c *Client) Ngrok(ctx context.Context, host string) (App, error) {
-	return c.action(ctx, host, "ngrok")
-}
-
 func (c *Client) action(ctx context.Context, host, action string) (App, error) {
 	var app App
 	return app, c.do(ctx, http.MethodPost, appPath(host, action), &app)

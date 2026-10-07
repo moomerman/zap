@@ -14,7 +14,6 @@ import (
 	"github.com/moomerman/zap/adapter/proxy"
 	"github.com/moomerman/zap/adapter/server"
 	"github.com/moomerman/zap/adapter/static"
-	"github.com/moomerman/zap/ngrok"
 )
 
 // State is the lifecycle state of an app
@@ -70,7 +69,6 @@ type app struct {
 	output   *appLog // the current adapter's output, nil if it has none
 	started  time.Time
 	lastUsed time.Time
-	ngrok    *ngrok.Tunnel
 	changed  chan struct{} // closed and replaced on every transition
 }
 
@@ -94,13 +92,6 @@ type Snapshot struct {
 	Adapter  adapter.Snapshot
 	Started  time.Time
 	LastUsed time.Time
-	Ngrok    *TunnelSnapshot `json:",omitempty"`
-}
-
-// TunnelSnapshot describes an ngrok tunnel
-type TunnelSnapshot struct {
-	URL      string
-	AdminURL string
 }
 
 func (a *app) snapshot() Snapshot {
@@ -114,9 +105,6 @@ func (a *app) snapshot() Snapshot {
 	}
 	if a.err != nil {
 		s.Error = a.err.Error()
-	}
-	if a.ngrok != nil {
-		s.Ngrok = &TunnelSnapshot{URL: a.ngrok.URL, AdminURL: a.ngrok.AdminURL}
 	}
 	adpt := a.adapter
 	a.mu.Unlock()
@@ -226,7 +214,7 @@ func (a *app) startLocked() error {
 	return nil
 }
 
-// stop stops the app's adapter and any ngrok tunnel
+// stop stops the app's adapter
 func (a *app) stop(reason error) error {
 	a.opMu.Lock()
 	defer a.opMu.Unlock()
@@ -242,16 +230,10 @@ func (a *app) stopLocked(reason error) error {
 	adpt := a.adapter
 	output := a.output
 	a.output = nil
-	tunnel := a.ngrok
-	a.ngrok = nil
 	host := a.config.Host
 	a.mu.Unlock()
 
 	log.Println("[app]", host, "stopping:", reason)
-
-	if tunnel != nil {
-		tunnel.Stop()
-	}
 
 	var err error
 	if adpt != nil {
@@ -357,25 +339,6 @@ func (a *app) LogTail() string {
 	buf := bytes.NewBufferString("")
 	a.WriteLog(buf)
 	return buf.String()
-}
-
-func (a *app) startNgrok(host string, port int) error {
-	a.mu.Lock()
-	existing := a.ngrok
-	a.mu.Unlock()
-	if existing != nil {
-		return nil
-	}
-
-	tunnel, err := ngrok.StartTunnel(host, port)
-	if err != nil {
-		return err
-	}
-
-	a.mu.Lock()
-	a.ngrok = tunnel
-	a.mu.Unlock()
-	return nil
 }
 
 func (a *app) touch() {

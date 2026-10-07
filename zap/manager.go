@@ -149,16 +149,6 @@ func (m *Manager) WriteLog(key string, w io.Writer) error {
 	return nil
 }
 
-// StartNgrok opens an ngrok tunnel to the app with the given key, if it
-// doesn't already have one
-func (m *Manager) StartNgrok(key string) error {
-	a, err := m.find(key)
-	if err != nil {
-		return err
-	}
-	return a.startNgrok(a.snapshot().Config.Host, 80)
-}
-
 // Subscribe returns a channel of app events and a function to unsubscribe.
 // Events are dropped if the subscriber falls too far behind.
 func (m *Manager) Subscribe() (<-chan Event, func()) {
