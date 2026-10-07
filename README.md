@@ -71,6 +71,78 @@ When a request arrives for an app that isn't running, zap starts it and holds
 the request until it has booted. If it fails to boot, the response shows the
 error and the app's recent output.
 
+## Configuring apps
+
+Each app is a file in `~/.zap` named after the host it answers on, eg.
+`~/.zap/myapp.test`. A `command` runs the app on a free port, `%s` in it is
+replaced by the port and then the host, and `PORT` (or the variable named by
+`port`) is set to the port. A `dir` with no `command` serves static files, and
+a `proxy` forwards to a server you run yourself.
+
+### Simple Proxy
+
+A proxy is configured by creating a file in the `~/.zap` folder containing the
+URL that you want to proxy to.
+
+`echo "proxy: http://127.0.0.1:3000" > ~/.zap/mysite.test`
+
+### Elixir/Phoenix
+
+Update your `config/dev.exs` file to allow zap to override the default 4000 http port.
+
+`config/dev.exs`
+```elixir
+config :your_app, YourApp.Web.Endpoint,
+  http: [port: System.get_env("PHX_PORT") || 4000],
+```
+
+~/.zap/phoenixapp.test
+
+```
+dir: /path/to/phoenix/app
+command: mix phx.server
+port: PHX_PORT
+```
+
+### Ruby/Rails
+
+~/.zap/railsapp.test
+
+```
+dir: /path/to/rails/app
+command: bin/rails s -p %s
+```
+
+### Go/Buffalo
+
+~/.zap/buffaloapp.test
+
+```
+dir: /path/to/buffalo/app
+command: buffalo dev
+```
+
+### Go/Hugo
+
+~/.zap/hugoapp.test
+
+```
+dir: /path/to/hugo/app
+command: hugo server -D -p %s -b https://%s/ --appendPort=false --liveReloadPort=443 --navigateToChanged
+```
+
+### Static HTML
+
+To enable a static HTML site, simply specify the public directory
+where the static files live.  Files in the directory will be served, if a directory
+root is requested `index.html` files will be served if they exist.
+
+~/.zap/staticapp.test
+
+```
+dir: /path/to/static/app
+```
+
 ## Logs
 
 On macOS zapd logs to `~/Library/Logs/zap/zapd.log`, and each app's output is

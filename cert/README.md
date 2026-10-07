@@ -35,7 +35,7 @@ valid certificates dynamically:
   }
 ```
 
-See https://github.com/moomerman/zap/tree/master/cert/example_test.go for
+See https://github.com/moomerman/zap/tree/main/cert/example_test.go for
 a full example.
 
 ## Credits

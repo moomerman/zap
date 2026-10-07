@@ -1,4 +1,6 @@
-package zap
+//go:build !darwin
+
+package setup
 
 func installService(httpAddr, httpsAddr, dnsAddr string, domains []string) error {
 	return nil

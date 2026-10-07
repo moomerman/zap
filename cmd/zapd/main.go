@@ -1,3 +1,5 @@
+// Command zapd runs the DNS responder, the HTTP and HTTPS proxy and the control
+// API, starting and stopping apps as requests arrive
 package main
 
 import (
@@ -14,6 +16,7 @@ import (
 
 	"github.com/moomerman/zap/control"
 	"github.com/moomerman/zap/dns"
+	"github.com/moomerman/zap/setup"
 	"github.com/moomerman/zap/zap"
 )
 
@@ -38,14 +41,14 @@ func main() {
 	domains := strings.Split(*fDNSDomains, ":")
 
 	if *fInstall {
-		if err := zap.Install(*fHTTP, *fHTTPS, *fDNS, domains); err != nil {
+		if err := setup.Install(*fHTTP, *fHTTPS, *fDNS, domains); err != nil {
 			log.Fatal("[zap] unable to install zap: ", err)
 		}
 		return
 	}
 
 	if *fUninstall {
-		if err := zap.Uninstall(domains); err != nil {
+		if err := setup.Uninstall(domains); err != nil {
 			log.Fatal("[zap] unable to uninstall zap: ", err)
 		}
 		return

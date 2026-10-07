@@ -1,4 +1,4 @@
-package zap
+package setup
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/moomerman/zap/dns"
 	"github.com/moomerman/zap/launchd"
+	"github.com/moomerman/zap/zap"
 )
 
 func installService(httpAddr, httpsAddr, dnsAddr string, domains []string) error {
@@ -19,7 +20,7 @@ func installService(httpAddr, httpsAddr, dnsAddr string, domains []string) error
 		"-dns=" + dnsAddr,
 		"-domains=" + strings.Join(domains, ":"),
 	}
-	return launchd.Install(appID, args, filepath.Join(DefaultLogDir(), appName+".log"))
+	return launchd.Install(appID, args, filepath.Join(zap.DefaultLogDir(), appName+".log"))
 }
 
 func uninstallService() error {

@@ -9,7 +9,7 @@ import (
 
 func TestStatic(t *testing.T) {
 
-	adapter := New("./test/static")
+	adapter := New("testdata")
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
