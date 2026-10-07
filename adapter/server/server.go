@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -16,7 +17,6 @@ import (
 	"time"
 
 	zadapter "github.com/moomerman/zap/adapter"
-	"github.com/moomerman/zap/rproxy"
 	"github.com/puma/puma-dev/linebuffer"
 )
 
@@ -64,7 +64,7 @@ type adapter struct {
 	port    string
 	command string
 	bootLog string
-	proxy   *rproxy.ReverseProxy
+	proxy   *httputil.ReverseProxy
 	run     *run
 }
 
@@ -110,9 +110,7 @@ func (a *adapter) Start() error {
 	}
 	// an empty hostname keeps the Host header of each incoming request, so
 	// apps that serve several hosts share one proxy
-	if a.proxy, err = rproxy.New(target, ""); err != nil {
-		return a.fail(err)
-	}
+	a.proxy = zadapter.NewReverseProxy(target, "")
 
 	r, err := a.startProcess()
 	if err != nil {
@@ -209,7 +207,7 @@ func (a *adapter) WriteLog(w io.Writer) {
 // ServeHTTP implements the http.Handler interface
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()
-	proxy := a.proxy
+	proxy, port := a.proxy, a.port
 	a.mu.Unlock()
 
 	if proxy == nil {
@@ -217,7 +215,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("[proxy]", zadapter.FullURL(r), "->", proxy.URL)
+	log.Println("[proxy]", zadapter.FullURL(r), "->", port)
 	proxy.ServeHTTP(w, r)
 }
 
