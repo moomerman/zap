@@ -46,10 +46,9 @@ func newApp(config *AppConfig) (*app, error) {
 	return app, nil
 }
 
+// newAdapter builds the adapter from the config. The caller must hold adapterMu
+// (or have exclusive access to the app, as newApp does).
 func (a *app) newAdapter() error {
-	a.adapterMu.Lock()
-	a.adapterMu.Unlock()
-
 	var adpt adapter.Adapter
 	var err error
 
@@ -74,6 +73,11 @@ func (a *app) Start() error {
 	a.adapterMu.Lock()
 	defer a.adapterMu.Unlock()
 
+	return a.start()
+}
+
+// start starts the adapter. The caller must hold adapterMu.
+func (a *app) start() error {
 	err := a.Adapter.Start()
 	if err != nil {
 		return err
@@ -109,7 +113,7 @@ func (a *app) RestartAdapter() error {
 	if err := a.newAdapter(); err != nil {
 		return err
 	}
-	return a.Start()
+	return a.start()
 }
 
 // Status returns the status of the application

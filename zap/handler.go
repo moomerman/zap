@@ -64,6 +64,7 @@ func restartHandler(w http.ResponseWriter, r *http.Request) {
 	if err := app.RestartAdapter(); err != nil {
 		log.Println("[app]", app.Config.Host, "internal server error", err)
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	http.Redirect(w, r, "/zap", http.StatusTemporaryRedirect)
@@ -89,6 +90,7 @@ func startNgrokHandler(w http.ResponseWriter, r *http.Request) {
 	if err := app.StartNgrok(r.Host, 80); err != nil {
 		log.Println("[app]", app.Config.Host, "internal server error", err)
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	http.Redirect(w, r, "/zap/ngrok", http.StatusTemporaryRedirect)

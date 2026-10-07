@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -18,7 +19,7 @@ import (
 	zadapter "github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/rproxy"
 	"github.com/puma/puma-dev/linebuffer"
-	"github.com/vektra/errors"
+	verrors "github.com/vektra/errors"
 )
 
 // Config holds the server configuration
@@ -121,10 +122,11 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (a *adapter) start() error {
 	a.changeState(zadapter.StatusStarting)
 	a.cancelChan = make(chan struct{})
+	a.cmd = nil
 
 	port, err := findAvailablePort()
 	if err != nil {
-		e := errors.Context(err, "couldn't find available port")
+		e := verrors.Context(err, "couldn't find available port")
 		a.error(e)
 		return e
 	}
@@ -133,14 +135,14 @@ func (a *adapter) start() error {
 
 	log.Println("[app] command:", a.ShellCommand)
 	if err := a.startApplication(a.ShellCommand); err != nil {
-		e := errors.Context(err, "could not start application")
+		e := verrors.Context(err, "could not start application")
 		a.error(e)
 		return e
 	}
 
 	a.proxies = make(map[string]*rproxy.ReverseProxy)
 
-	go a.tail()
+	go a.tail(a.cmd.Process.Pid)
 	go a.checkPort()
 
 	return nil
@@ -150,8 +152,14 @@ func (a *adapter) stop() error {
 	a.changeState(zadapter.StatusStopping)
 	defer close(a.cancelChan)
 
+	// start can fail before the process exists (no free port, bad shell)
+	if a.cmd == nil {
+		a.changeState(zadapter.StatusStopped)
+		return nil
+	}
+
 	err := a.cmd.Process.Kill()
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrProcessDone) {
 		log.Println("[app]", a.Host, "error trying to stop", err)
 		return err
 	}
@@ -212,7 +220,7 @@ func (a *adapter) startApplication(command string) error {
 	cmd.Stderr = cmd.Stdout
 
 	if err = cmd.Start(); err != nil {
-		return errors.Context(err, "starting app")
+		return verrors.Context(err, "starting app")
 	}
 
 	a.Pid = cmd.Process.Pid
@@ -220,7 +228,7 @@ func (a *adapter) startApplication(command string) error {
 	return nil
 }
 
-func (a *adapter) tail() {
+func (a *adapter) tail(pid int) {
 	c := make(chan error)
 
 	go func() {
@@ -230,11 +238,11 @@ func (a *adapter) tail() {
 			line, err := r.ReadString('\n')
 			if line != "" {
 				a.log.Append(line)
-				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, a.cmd.Process.Pid, line)
+				fmt.Fprintf(os.Stdout, "  [log] %s:%s[%d]: %s", a.Host, a.Port, pid, line)
 
 				for _, pattern := range a.RestartPatterns {
 					if pattern.MatchString(line) {
-						a.Stop(errors.New("Restart pattern matched"))
+						a.Stop(verrors.New("Restart pattern matched"))
 						return
 					}
 				}
@@ -251,7 +259,7 @@ func (a *adapter) tail() {
 
 	select {
 	case err = <-c:
-		a.Stop(errors.Context(err, "stdout/stderr closed"))
+		a.Stop(verrors.Context(err, "stdout/stderr closed"))
 	}
 
 }
@@ -282,7 +290,7 @@ func (a *adapter) checkPort() {
 			}
 		case <-timeout:
 			log.Println("[app]", a.Host, "timeout waiting for port", a.Port)
-			a.error(errors.New("check port timeout"))
+			a.error(verrors.New("check port timeout"))
 			return
 		}
 	}
