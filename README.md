@@ -30,8 +30,25 @@ make            # builds bin/zapd and bin/zap
 bin/zapd -install # run the installer
 ```
 
-The installer points launchd at the zapd binary it was run from, so run it
-again if you move the binary (eg. from an older `./zapd` to `bin/zapd`).
+The installer:
+
+* writes `/etc/resolver/test` so `*.test` resolves to zap's DNS responder on
+  `127.0.0.1:9253` (it uses sudo for this, so run it as yourself and enter
+  your password when asked). Pick other domains with `-domains=test:localhost`
+  on both `-install` and `-uninstall`.
+* creates the certificate authority zap signs each host's certificate with.
+* installs a launch agent that runs the zapd binary it was run from, listening
+  directly on `127.0.0.1:80` and `127.0.0.1:443`. macOS only lets a normal
+  user bind those ports on all interfaces, so zapd falls back to that and
+  drops any connection that isn't from this machine. Run it again if you move the
+  binary, or to change the `-http`, `-https`, `-dns` or `-domains` it passes.
+
+If another file in `/etc/resolver` also claims `.test` (Apple's `container`
+tool writes `containerization.test`), the installer warns about it. macOS can
+send `.test` lookups to that file's server instead of zap's, so remove it
+unless you need it.
+
+`bin/zapd -uninstall` removes the launch agent and the resolver files zap wrote.
 
 ## Usage
 

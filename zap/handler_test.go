@@ -1,6 +1,7 @@
 package zap
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -107,5 +108,39 @@ func TestProxyHandlerStreamsBootPage(t *testing.T) {
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected the app to serve the reload, got %d", w.Code)
+	}
+}
+
+func TestListenRejectsOldLaunchdSockets(t *testing.T) {
+	for _, addr := range []string{"Socket", "SocketTLS"} {
+		if _, err := listen(addr); err == nil || !strings.Contains(err.Error(), "-install") {
+			t.Errorf("%s: got %v, want an error asking to reinstall", addr, err)
+		}
+	}
+}
+
+func TestLoopbackListenerRefusesOtherMachines(t *testing.T) {
+	inner, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := &loopbackListener{inner}
+	defer l.Close()
+
+	go func() {
+		if c, err := net.Dial("tcp", inner.Addr().String()); err == nil {
+			c.Close()
+		}
+	}()
+	conn, err := l.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.Close()
+
+	for host, want := range map[string]bool{"127.0.0.1": true, "::1": true, "localhost": true, "0.0.0.0": false, "192.168.1.5": false, "": false} {
+		if got := isLoopback(host); got != want {
+			t.Errorf("isLoopback(%q) = %v, want %v", host, got, want)
+		}
 	}
 }
