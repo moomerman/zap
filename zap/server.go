@@ -33,9 +33,9 @@ func (s *Server) Serve() {
 		s.Manager = NewManager()
 		s.Manager.LogDir = s.LogDir
 	}
-	h := &handlers{manager: s.Manager}
-	s.http = h.httpServer()
-	s.https = h.httpsServer()
+	h := &proxyHandler{manager: s.Manager}
+	s.http = &http.Server{Handler: h}
+	s.https = httpsServer(h)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -74,29 +74,7 @@ func (s *Server) Stop() {
 	s.https.Shutdown(ctx)
 }
 
-func (h *handlers) httpServer() *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", h.ensureApp(h.app))
-
-	return &http.Server{
-		Handler: mux,
-	}
-}
-
-func (h *handlers) httpsServer() *http.Server {
-	mux := http.NewServeMux()
-	// TODO: don't handle these requests unless localhost request (eg. not via ngrok)
-	// Maybe have a zapHandler that checks for localhost and then delegates requests
-	mux.HandleFunc("/zap/api/apps", h.appsAPI)
-	mux.HandleFunc("/zap/api/log", h.findApp(h.logAPI))
-	mux.HandleFunc("/zap/api/state", h.findApp(h.stateAPI))
-	mux.HandleFunc("/zap/ngrok/start", h.findApp(h.startNgrok))
-	mux.HandleFunc("/zap/ngrok", h.findApp(h.ngrok))
-	mux.HandleFunc("/zap/log", h.findApp(h.log))
-	mux.HandleFunc("/zap/restart", h.findApp(h.restart))
-	mux.HandleFunc("/zap", h.ensureApp(h.status))
-	mux.HandleFunc("/", h.ensureApp(h.app))
-
+func httpsServer(h http.Handler) *http.Server {
 	cache, err := cert.NewCache()
 	if err != nil {
 		log.Fatal("[zap] unable to create new cert cache", err)
@@ -107,7 +85,7 @@ func (h *handlers) httpsServer() *http.Server {
 	}
 
 	server := &http.Server{
-		Handler:   mux,
+		Handler:   h,
 		TLSConfig: tlsConfig,
 	}
 	http2.ConfigureServer(server, nil)

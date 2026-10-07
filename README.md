@@ -26,9 +26,31 @@ Zap allows you to specify any command to start a backend server, we've tested it
 Either grab a binary for your platform from the Releases page or grab the code and build your own
 
 ```go
-go build -o zapd main.go # build the zapd binary
+go build -o zapd . # build the zapd binary
+go build ./cmd/zap # build the zap command
 zapd -install # run the installer
 ```
+
+## Usage
+
+`zap` shows and controls the apps zapd is running. It talks to zapd over a
+local unix socket (`~/Library/Application Support/zap/zapd.sock` on macOS,
+change it with `zapd -control` and `zap -socket`).
+
+```
+zap ls                 # list apps and their status
+zap status myapp.test  # show an app's details
+zap restart myapp.test # start, stop or restart an app
+zap logs -f myapp.test # show and follow an app's output
+zap events             # stream status changes and output for every app
+```
+
+The same API is available to other clients as JSON over the socket, see
+`control/api.go`.
+
+When a request arrives for an app that isn't running, zap starts it and holds
+the request until it has booted. If it fails to boot, the response shows the
+error and the app's recent output.
 
 ## Logs
 
@@ -38,18 +60,12 @@ written to its own file next to it, named after the host that started it (eg.
 `-logs=` to send app output to zapd's stdout. If you installed zap before this
 change, run `zapd -install` again to move zapd's own log.
 
-## Wishlist
-
-* Status UI
-
 ## Credits
 
 Inspired by pow (http://pow.cx/) and puma-dev (https://github.com/puma/puma-dev)
 
 ## Development
 
-To recompile the HTML templates, build and restart the server
-
 ```
-pushd zap; go-bindata -pkg zap -o templates.go templates/; popd && go build -o zapd main.go && pkill zapd
+go build -o zapd . && pkill zapd # launchd restarts it with the new binary
 ```

@@ -2,6 +2,7 @@ package zap
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -70,6 +71,7 @@ type app struct {
 	started  time.Time
 	lastUsed time.Time
 	ngrok    *ngrok.Tunnel
+	changed  chan struct{} // closed and replaced on every transition
 }
 
 func newApp(config *AppConfig, publish func(Event), logDir string) *app {
@@ -79,6 +81,7 @@ func newApp(config *AppConfig, publish func(Event), logDir string) *app {
 		logDir:  logDir,
 		config:  config,
 		state:   StateStopped,
+		changed: make(chan struct{}),
 	}
 }
 
@@ -130,6 +133,25 @@ func (a *app) status() State {
 	return a.state
 }
 
+// waitStarted waits until the app is no longer starting, or ctx is done, and
+// returns its state
+func (a *app) waitStarted(ctx context.Context) State {
+	for {
+		a.mu.Lock()
+		state, changed := a.state, a.changed
+		a.mu.Unlock()
+
+		if state != StateStarting {
+			return state
+		}
+		select {
+		case <-changed:
+		case <-ctx.Done():
+			return state
+		}
+	}
+}
+
 // setConfig updates the config used the next time the app starts
 func (a *app) setConfig(config *AppConfig) {
 	a.mu.Lock()
@@ -147,6 +169,8 @@ func (a *app) transition(to State, err error) bool {
 	if to == StateError || to == StateStarting {
 		a.err = err
 	}
+	close(a.changed)
+	a.changed = make(chan struct{})
 	log.Println("[app]", a.config.Host, from, "->", to)
 	a.publish(Event{Type: EventStatus, Key: a.key, Host: a.config.Host, Status: to, Error: errString(err), Time: time.Now()})
 	return true
