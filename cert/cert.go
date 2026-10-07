@@ -16,9 +16,7 @@ import (
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/puma/puma-dev/homedir"
-	"github.com/vektra/errors"
+	"github.com/moomerman/zap/internal/homedir"
 )
 
 // CACert is the self-signed root certificate
@@ -29,7 +27,7 @@ func CreateCACert(caName string) ([]byte, []byte, error) {
 
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, nil, errors.Context(err, "generating new RSA key")
+		return nil, nil, fmt.Errorf("generating new RSA key: %w", err)
 	}
 
 	// create certificate structure with proper values
@@ -38,7 +36,7 @@ func CreateCACert(caName string) ([]byte, []byte, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, nil, errors.Context(err, "generating serial number")
+		return nil, nil, fmt.Errorf("generating serial number: %w", err)
 	}
 
 	cert := &x509.Certificate{
@@ -57,7 +55,7 @@ func CreateCACert(caName string) ([]byte, []byte, error) {
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, cert, cert, priv.Public(), priv)
 	if err != nil {
-		return nil, nil, errors.Context(err, "creating CA cert")
+		return nil, nil, fmt.Errorf("creating CA cert: %w", err)
 	}
 
 	encodedKey := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
@@ -67,9 +65,12 @@ func CreateCACert(caName string) ([]byte, []byte, error) {
 }
 
 func writeCACert(path string, key, cert []byte) error {
-	dir := homedir.MustExpand(path)
+	dir, err := homedir.Expand(path)
+	if err != nil {
+		return err
+	}
 
-	err := os.MkdirAll(dir, 0700)
+	err = os.MkdirAll(dir, 0700)
 	if err != nil {
 		return err
 	}
@@ -84,14 +85,14 @@ func writeCACert(path string, key, cert []byte) error {
 
 	certOut, err := os.Create(certPath)
 	if err != nil {
-		return errors.Context(err, "writing cert.pem")
+		return fmt.Errorf("writing cert.pem: %w", err)
 	}
 	certOut.Write(cert)
 	certOut.Close()
 
 	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return errors.Context(err, "writing key.pem")
+		return fmt.Errorf("writing key.pem: %w", err)
 	}
 	keyOut.Write(key)
 	keyOut.Close()
@@ -99,25 +100,20 @@ func writeCACert(path string, key, cert []byte) error {
 	return nil
 }
 
-// Cache is a struct to hold the dynamic certificates and a lock
+// Cache holds the certificates issued for each host
 type Cache struct {
 	lock  sync.Mutex
-	cache *lru.ARCCache
+	certs map[string]*tls.Certificate
 }
 
 // NewCache holds the dynamically generated host certificates
 func NewCache() (*Cache, error) {
 	err := loadCertLegacy()
 	if err != nil {
-		return nil, errors.Context(err, "couldn't load root certificate")
+		return nil, fmt.Errorf("couldn't load root certificate: %w", err)
 	}
 
-	cache, err := lru.NewARC(1024)
-	if err != nil {
-		return nil, errors.Context(err, "couldn't create a new cache")
-	}
-
-	return &Cache{cache: cache}, nil
+	return &Cache{certs: make(map[string]*tls.Certificate)}, nil
 }
 
 // GetCertificate implements the required function for tls config
@@ -127,8 +123,8 @@ func (c *Cache) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certifica
 
 	name := clientHello.ServerName
 
-	if val, ok := c.cache.Get(name); ok {
-		return val.(*tls.Certificate), nil
+	if cert, ok := c.certs[name]; ok {
+		return cert, nil
 	}
 
 	cert, err := IssueCert(CACert, name, nil)
@@ -136,7 +132,7 @@ func (c *Cache) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certifica
 		return nil, err
 	}
 
-	c.cache.Add(name, cert)
+	c.certs[name] = cert
 
 	return cert, nil
 }
@@ -148,7 +144,7 @@ func IssueCert(parent *tls.Certificate, commonName string, ipAddress net.IP) (*t
 	// privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate private key: %v", err)
+		return nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// create certificate structure with proper values
@@ -157,7 +153,7 @@ func IssueCert(parent *tls.Certificate, commonName string, ipAddress net.IP) (*t
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate serial number: %v", err)
+		return nil, fmt.Errorf("failed to generate serial number: %w", err)
 	}
 
 	cert := &x509.Certificate{
@@ -186,7 +182,7 @@ func IssueCert(parent *tls.Certificate, commonName string, ipAddress net.IP) (*t
 		rand.Reader, cert, x509parent, privKey.Public(), parent.PrivateKey)
 
 	if err != nil {
-		return nil, fmt.Errorf("could not create certificate: %v", err)
+		return nil, fmt.Errorf("could not create certificate: %w", err)
 	}
 
 	tlsCert := &tls.Certificate{
@@ -208,7 +204,10 @@ func EncodeCert(cert *tls.Certificate) ([]byte, []byte, error) {
 
 // LoadCACert loads a certificate key pair into memory
 func LoadCACert(rootDir string) (*tls.Certificate, error) {
-	dir := homedir.MustExpand(rootDir)
+	dir, err := homedir.Expand(rootDir)
+	if err != nil {
+		return nil, err
+	}
 
 	keyPath := filepath.Join(dir, "key.pem")
 	certPath := filepath.Join(dir, "cert.pem")

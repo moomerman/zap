@@ -1,12 +1,11 @@
 package zap
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/puma/puma-dev/homedir"
-	"gopkg.in/yaml.v2"
+	"github.com/moomerman/zap/internal/homedir"
+	"go.yaml.in/yaml/v3"
 )
 
 const appsPath = "~/.zap"
@@ -38,13 +37,13 @@ func getAppConfig(host string) (*AppConfig, error) {
 }
 
 func readConfigFromFile(path, host string) (*AppConfig, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
 	config := &AppConfig{Scheme: "http", Port: "PORT"}
-	err = yaml.Unmarshal([]byte(data), config)
+	err = yaml.Unmarshal(data, config)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +63,12 @@ func readConfigFromFile(path, host string) (*AppConfig, error) {
 // it will check moo.foo.dev and foo.dev in that order and return the first
 // one it finds
 func getClosestMatchingPath(host string) (string, error) {
-	path := homedir.MustExpand(appsPath) + "/" + host
-	_, err := os.Stat(path)
+	dir, err := homedir.Expand(appsPath)
+	if err != nil {
+		return "", err
+	}
+	path := dir + "/" + host
+	_, err = os.Stat(path)
 	if err != nil {
 		parts := strings.Split(host, ".")
 		if len(parts) > 2 {

@@ -1,6 +1,7 @@
 package zap
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/moomerman/zap/cert"
 )
 
 func TestProxyHandlerStartsStaticApp(t *testing.T) {
@@ -142,5 +145,35 @@ func TestLoopbackListenerRefusesOtherMachines(t *testing.T) {
 		if got := isLoopback(host); got != want {
 			t.Errorf("isLoopback(%q) = %v, want %v", host, got, want)
 		}
+	}
+}
+
+func TestHTTPSServesHTTP2(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := cert.CreateCertLegacy(); err != nil {
+		t.Fatal(err)
+	}
+
+	s := httpsServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(r.Proto))
+	}))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go s.ServeTLS(listener, "", "")
+	defer s.Close()
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true, ServerName: "app.test"},
+		ForceAttemptHTTP2: true,
+	}}
+	res, err := client.Get("https://" + listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.ProtoMajor != 2 {
+		t.Errorf("expected HTTP/2, got %s", res.Proto)
 	}
 }

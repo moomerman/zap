@@ -57,6 +57,7 @@ type app struct {
 	key     string
 	publish func(Event)
 	logDir  string
+	build   adapterFunc // builds the adapter for each start, a.newAdapter if nil
 
 	opMu sync.Mutex
 
@@ -196,7 +197,12 @@ func (a *app) startLocked() error {
 		oldOutput.Close()
 	}
 
-	adpt, output := a.newAdapter(config, gen)
+	build := a.build
+	if build == nil {
+		build = a.newAdapter
+	}
+	onStatus := func(status adapter.Status, err error) { a.adapterChanged(gen, status, err) }
+	adpt, output := build(config, onStatus)
 	a.mu.Lock()
 	a.adapter = adpt
 	a.output = output
@@ -281,9 +287,13 @@ func (a *app) adapterChanged(gen int, status adapter.Status, err error) {
 	}
 }
 
-// newAdapter builds the adapter for config. Adapters that run a process also
-// get an appLog for its output, which the caller must close.
-func (a *app) newAdapter(config *AppConfig, gen int) (adapter.Adapter, *appLog) {
+// adapterFunc builds the adapter for config, which reports asynchronous status
+// changes to onStatus. Adapters that run a process also get an appLog for
+// their output, which the caller must close.
+type adapterFunc func(config *AppConfig, onStatus adapter.StatusFunc) (adapter.Adapter, *appLog)
+
+// newAdapter is the adapterFunc used outside tests
+func (a *app) newAdapter(config *AppConfig, onStatus adapter.StatusFunc) (adapter.Adapter, *appLog) {
 	if config.Dir == "" {
 		return proxy.New(config.Host, config.Proxy), nil
 	}
@@ -300,7 +310,7 @@ func (a *app) newAdapter(config *AppConfig, gen int) (adapter.Adapter, *appLog) 
 		Dir:          config.Dir,
 		EnvPortName:  config.Port,
 		ShellCommand: "exec " + config.Command + " # %s %s",
-		OnStatus:     func(status adapter.Status, err error) { a.adapterChanged(gen, status, err) },
+		OnStatus:     onStatus,
 		OnLog: func(line string) {
 			output.WriteLine(line)
 			a.publish(Event{Type: EventLog, Key: a.key, Host: config.Host, Line: line, Time: time.Now()})

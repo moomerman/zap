@@ -56,6 +56,7 @@ type Manager struct {
 	LogDir string
 
 	resolve func(host string) (*AppConfig, error)
+	build   adapterFunc // nil outside tests
 
 	mu     sync.Mutex
 	apps   map[string]*app
@@ -245,6 +246,7 @@ func (m *Manager) lookup(host string) (*app, *AppConfig, error) {
 		}
 		log.Println("[app]", host, config.Key, "creating app")
 		a = newApp(config, m.publish, m.LogDir)
+		a.build = m.build
 		m.apps[config.Key] = a
 	}
 

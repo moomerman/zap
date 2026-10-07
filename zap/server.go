@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/moomerman/zap/cert"
-	"golang.org/x/net/http2"
 )
 
 // Server holds the state for the HTTP and HTTPS servers
@@ -95,7 +94,8 @@ func (s *Server) serveHTTPS() error {
 	}
 
 	log.Println("[zap] https listening at", listener.Addr())
-	return s.https.Serve(tls.NewListener(listener, s.https.TLSConfig))
+	// ServeTLS adds h2 to the TLS config, which Serve with a tls listener doesn't
+	return s.https.ServeTLS(listener, "", "")
 }
 
 func listen(addr string) (net.Listener, error) {
@@ -160,11 +160,8 @@ func httpsServer(h http.Handler) *http.Server {
 		GetCertificate: cache.GetCertificate,
 	}
 
-	server := &http.Server{
+	return &http.Server{
 		Handler:   h,
 		TLSConfig: tlsConfig,
 	}
-	http2.ConfigureServer(server, nil)
-
-	return server
 }
