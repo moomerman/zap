@@ -25,11 +25,13 @@ Zap allows you to specify any command to start a backend server, we've tested it
 
 Either grab a binary for your platform from the Releases page or grab the code and build your own
 
-```go
-go build -o zapd . # build the zapd binary
-go build ./cmd/zap # build the zap command
-zapd -install # run the installer
 ```
+make            # builds bin/zapd and bin/zap
+bin/zapd -install # run the installer
+```
+
+The installer points launchd at the zapd binary it was run from, so run it
+again if you move the binary (eg. from an older `./zapd` to `bin/zapd`).
 
 ## Usage
 
@@ -67,5 +69,5 @@ Inspired by pow (http://pow.cx/) and puma-dev (https://github.com/puma/puma-dev)
 ## Development
 
 ```
-go build -o zapd . && pkill zapd # launchd restarts it with the new binary
+make && pkill zapd # launchd restarts it with the new binary
 ```
