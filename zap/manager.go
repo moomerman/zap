@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"sort"
 	"strings"
@@ -44,8 +45,7 @@ type Event struct {
 }
 
 // Manager owns the set of apps and their lifecycles. It is the single API
-// that the HTTP handlers (and any other client) use to inspect and control
-// apps.
+// that the app proxy and the control API use to inspect and control apps.
 type Manager struct {
 	// IdleTimeout is how long an app can go without requests before it is
 	// stopped
@@ -137,6 +137,16 @@ func (m *Manager) Restart(key string) error {
 		return ErrShutdown
 	}
 	return a.restart()
+}
+
+// WriteLog writes the recent output of the app with the given key to w
+func (m *Manager) WriteLog(key string, w io.Writer) error {
+	a, err := m.find(key)
+	if err != nil {
+		return err
+	}
+	a.WriteLog(w)
+	return nil
 }
 
 // Subscribe returns a channel of app events and a function to unsubscribe.
