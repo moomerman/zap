@@ -20,6 +20,7 @@ var (
 	fHTTPS      = flag.String("https", "127.0.0.1:443", "address to listen on for HTTPS requests")
 	fDNS        = flag.String("dns", "127.0.0.1:9253", "address to listen on for DNS requests")
 	fDNSDomains = flag.String("domains", "dev:test", "domains to handle for DNS requests, separate with :")
+	fLogs       = flag.String("logs", zap.DefaultLogDir(), "directory for app logs, one file per app (empty logs to stdout)")
 )
 
 func init() {
@@ -51,6 +52,7 @@ func main() {
 	server := &zap.Server{
 		HTTPAddr:  *fHTTP,
 		HTTPSAddr: *fHTTPS,
+		LogDir:    *fLogs,
 	}
 
 	go func() {

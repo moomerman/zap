@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/kardianos/osext"
 	"github.com/puma/puma-dev/homedir"
@@ -12,7 +13,8 @@ import (
 )
 
 // Install installs the launch agent on macOS
-func Install(appID, appName, httpHost, httpPort, tlsHost, tlsPort string) error {
+// zapd's own output goes to <logDir>/<appName>.log, next to the app logs.
+func Install(appID, appName, httpHost, httpPort, tlsHost, tlsPort, logDir string) error {
 	Uninstall(appID, appName)
 
 	binPath, err := osext.Executable()
@@ -63,13 +65,16 @@ func Install(appID, appName, httpHost, httpPort, tlsHost, tlsPort string) error 
 </plist>
 `
 
-	logPath := homedir.MustExpand("~/Library/Logs/" + appName + ".log")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return errors.Context(err, "creating log directory")
+	}
+	logPath := filepath.Join(logDir, appName+".log")
 	plistDir := homedir.MustExpand("~/Library/LaunchAgents")
 	plist := homedir.MustExpand("~/Library/LaunchAgents/" + appID + ".plist")
 
 	config := []byte(fmt.Sprintf(userTemplate, appName, binPath, httpHost, httpPort, tlsHost, tlsPort, logPath, logPath))
 
-	if err := os.MkdirAll(plistDir, 0644); err != nil {
+	if err := os.MkdirAll(plistDir, 0755); err != nil {
 		return errors.Context(err, "creating LaunchAgents directory")
 	}
 

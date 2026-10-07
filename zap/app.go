@@ -11,6 +11,8 @@ import (
 
 	"github.com/moomerman/zap/adapter"
 	"github.com/moomerman/zap/adapter/proxy"
+	"github.com/moomerman/zap/adapter/server"
+	"github.com/moomerman/zap/adapter/static"
 	"github.com/moomerman/zap/ngrok"
 )
 
@@ -54,6 +56,7 @@ func canTransition(from, to State) bool {
 type app struct {
 	key     string
 	publish func(Event)
+	logDir  string
 
 	opMu sync.Mutex
 
@@ -63,15 +66,17 @@ type app struct {
 	err      error
 	gen      int // incremented on each start, to ignore reports from old adapters
 	adapter  adapter.Adapter
+	output   *appLog // the current adapter's output, nil if it has none
 	started  time.Time
 	lastUsed time.Time
 	ngrok    *ngrok.Tunnel
 }
 
-func newApp(config *AppConfig, publish func(Event)) *app {
+func newApp(config *AppConfig, publish func(Event), logDir string) *app {
 	return &app{
 		key:     config.Key,
 		publish: publish,
+		logDir:  logDir,
 		config:  config,
 		state:   StateStopped,
 	}
@@ -164,7 +169,9 @@ func (a *app) startLocked() error {
 	gen := a.gen
 	config := a.config
 	old := a.adapter
+	oldOutput := a.output
 	a.adapter = nil
+	a.output = nil
 	a.started = time.Now()
 	a.lastUsed = a.started
 	a.mu.Unlock()
@@ -173,15 +180,17 @@ func (a *app) startLocked() error {
 	if old != nil {
 		old.Stop(fmt.Errorf("replaced"))
 	}
-
-	adpt, err := a.newAdapter(config, gen)
-	if err == nil {
-		a.mu.Lock()
-		a.adapter = adpt
-		a.mu.Unlock()
-		err = adpt.Start()
+	if oldOutput != nil {
+		oldOutput.Close()
 	}
-	if err != nil {
+
+	adpt, output := a.newAdapter(config, gen)
+	a.mu.Lock()
+	a.adapter = adpt
+	a.output = output
+	a.mu.Unlock()
+
+	if err := adpt.Start(); err != nil {
 		a.mu.Lock()
 		a.transition(StateError, err)
 		a.mu.Unlock()
@@ -207,6 +216,8 @@ func (a *app) stopLocked(reason error) error {
 		return nil // already stopped
 	}
 	adpt := a.adapter
+	output := a.output
+	a.output = nil
 	tunnel := a.ngrok
 	a.ngrok = nil
 	host := a.config.Host
@@ -221,6 +232,9 @@ func (a *app) stopLocked(reason error) error {
 	var err error
 	if adpt != nil {
 		err = adpt.Stop(reason)
+	}
+	if output != nil {
+		output.Close()
 	}
 
 	a.mu.Lock()
@@ -261,25 +275,32 @@ func (a *app) adapterChanged(gen int, status adapter.Status, err error) {
 	}
 }
 
-func (a *app) newAdapter(config *AppConfig, gen int) (adapter.Adapter, error) {
+// newAdapter builds the adapter for config. Adapters that run a process also
+// get an appLog for its output, which the caller must close.
+func (a *app) newAdapter(config *AppConfig, gen int) (adapter.Adapter, *appLog) {
 	if config.Dir == "" {
-		adpt, err := proxy.New(config.Host, config.Proxy)
-		if err != nil {
-			return nil, fmt.Errorf("unable to create proxy adapter: %w", err)
-		}
-		return adpt, nil
+		return proxy.New(config.Host, config.Proxy), nil
+	}
+	if config.Command == "" {
+		log.Println("[app]", config.Host, "using the static adapter")
+		return static.New(config.Dir), nil
 	}
 
-	onStatus := func(status adapter.Status, err error) { a.adapterChanged(gen, status, err) }
-	onLog := func(line string) {
-		a.publish(Event{Type: EventLog, Key: a.key, Host: config.Host, Line: line, Time: time.Now()})
-	}
-
-	adpt, err := GetAdapter(config, onStatus, onLog)
-	if err != nil {
-		return nil, fmt.Errorf("could not determine adapter: %w", err)
-	}
-	return adpt, nil
+	output := openAppLog(a.logDir, config.Host)
+	adpt := server.New(&server.Config{
+		Name:         "Server",
+		Scheme:       config.Scheme,
+		Host:         config.Host,
+		Dir:          config.Dir,
+		EnvPortName:  config.Port,
+		ShellCommand: "exec " + config.Command + " # %s %s",
+		OnStatus:     func(status adapter.Status, err error) { a.adapterChanged(gen, status, err) },
+		OnLog: func(line string) {
+			output.WriteLine(line)
+			a.publish(Event{Type: EventLog, Key: a.key, Host: config.Host, Line: line, Time: time.Now()})
+		},
+	})
+	return adpt, output
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
