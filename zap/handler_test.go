@@ -2,14 +2,17 @@ package zap
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/moomerman/zap/cert"
 )
@@ -175,5 +178,20 @@ func TestHTTPSServesHTTP2(t *testing.T) {
 	defer res.Body.Close()
 	if res.ProtoMajor != 2 {
 		t.Errorf("expected HTTP/2, got %s", res.Proto)
+	}
+}
+
+func TestBootPageIsPaintedBeforeAnyOutput(t *testing.T) {
+	head := fmt.Sprintf(bootPageHead, "a.test")
+
+	// Safari waits for 200px of height and about 200 characters of visible
+	// text before it paints a page that is still loading
+	if !strings.Contains(head, "min-height:100vh") {
+		t.Error("expected the boot page to fill the viewport")
+	}
+	body := head[strings.Index(head, "<body>"):]
+	text := regexp.MustCompile(`<[^>]*>|\s+`).ReplaceAllString(body, "")
+	if n := utf8.RuneCountInString(text); n < 200 {
+		t.Errorf("expected at least 200 characters of text before any output, got %d: %q", n, text)
 	}
 }
