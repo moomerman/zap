@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/miekg/dns v1.1.73
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 )
 
 require (
